@@ -581,37 +581,29 @@
             showMessage(message, 'error');
         }
 
-        // Password Check Function - Load live data with better error handling
+        // Password Check Function - Start with test data, offer live data option
         function checkPassword() {
             const inputPassword = document.getElementById('dashboardPassword').value.trim();
             
             if (inputPassword === DASHBOARD_PASSWORD) {
                 isAuthenticated = true;
-                showSuccessMessage('✅ Giriş başarılı! Canlı veriler yükleniyor...');
+                showSuccessMessage('✅ Giriş başarılı! Dashboard hazırlanıyor...');
                 document.getElementById('passwordSetup').style.display = 'none';
-                setStatus('loading', 'GitHub\'dan canlı veriler yükleniyor...');
+                setStatus('loading', 'Dashboard hazırlanıyor...');
                 
-                // Try to load live data first, fallback to test data
-                loadLiveDataWithFallback();
+                // Start with reliable test data
+                loadTestData();
+                
+                // Show option for live data after dashboard is ready
+                setTimeout(() => {
+                    showMessage('🌐 Canlı GitHub verilerini denemek ister misiniz? "Yenile" butonuna basın.', 'info');
+                }, 3000);
             } else {
                 showErrorMessage('❌ Hatalı şifre! Tekrar deneyin.');
                 document.getElementById('dashboardPassword').value = '';
                 document.getElementById('dashboardPassword').focus();
             }
-        }
-
-        // Load live data with automatic fallback to test data
-        async function loadLiveDataWithFallback() {
-            try {
-                // Try loading from live sources with 10 second timeout
-                const timeoutPromise = new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('Timeout: 10 saniye içinde yanıt alınamadı')), 10000)
-                );
-                
-                await Promise.race([testAllSources(), timeoutPromise]);
-                
-            } catch (error) {
-                console.warn('Live data failed, falling back to test data:', error.message);
+        } falling back to test data:', error.message);
                 
                 // Show friendly message and load test data
                 showSuccessMessage('⚡ Test verileri yükleniyor (canlı veri geçici olarak kullanılamıyor)...');
@@ -1010,9 +1002,8 @@
                     const response = await fetch(url, {
                         method: 'GET',
                         headers: {
-                            'Accept': 'application/json, text/plain, */*',
-                            'Cache-Control': 'no-cache',
-                            'User-Agent': 'Store-Dashboard/1.0'
+                            'Accept': 'application/json, text/plain, */*'
+                            // Removed Cache-Control header - causes CORS preflight issues
                         },
                         signal: controller.signal,
                         mode: 'cors' // Explicitly set CORS mode
