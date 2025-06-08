@@ -532,19 +532,19 @@
         // Dashboard Configuration
         const DASHBOARD_PASSWORD = "dashboard123";
         
-        // GitHub data access URLs - CORS problemini çözmek için
+        // GitHub data access URLs - Updated with correct repo
         const FALLBACK_DATA_SOURCES = [
-            // Primary: GitHub API ile base64 decode (CORS yok)
+            // Primary: GitHub API ile base64 decode (No CORS)
             "https://api.github.com/repos/gkobar/dashboard-project/contents/data.csv",
             
-            // Backup: CORS Proxy ile GitHub raw
-            "https://api.allorigins.win/get?url=" + encodeURIComponent("https://raw.githubusercontent.com/gkobar/dashboard-project/main/data.csv"),
+            // Backup: CORS Proxy ile GitHub raw - FIXED
+            "https://api.allorigins.win/raw?url=" + encodeURIComponent("https://raw.githubusercontent.com/gkobar/dashboard-project/main/data.csv"),
             
             // Backup 2: Farklı CORS proxy
             "https://corsproxy.io/?" + encodeURIComponent("https://raw.githubusercontent.com/gkobar/dashboard-project/main/data.csv"),
             
-            // Last resort: Google Sheets direkt
-            "https://api.allorigins.win/get?url=" + encodeURIComponent("https://docs.google.com/spreadsheets/d/1JUmhcit0KzPKppTJQGVxsWCuXCpYhmbL4KXCgTpdTyY/export?format=csv&gid=0")
+            // Last resort: Direct GitHub raw (might fail due to CORS)
+            "https://raw.githubusercontent.com/gkobar/dashboard-project/main/data.csv"
         ];
 
         // Status functions
@@ -581,23 +581,251 @@
             showMessage(message, 'error');
         }
 
-        // Password Check Function - Direct data loading
+        // Password Check Function - Load live data with better error handling
         function checkPassword() {
             const inputPassword = document.getElementById('dashboardPassword').value.trim();
             
             if (inputPassword === DASHBOARD_PASSWORD) {
                 isAuthenticated = true;
-                showSuccessMessage('✅ Giriş başarılı! Test verileri yükleniyor...');
+                showSuccessMessage('✅ Giriş başarılı! Canlı veriler yükleniyor...');
                 document.getElementById('passwordSetup').style.display = 'none';
-                setStatus('loading', 'Test verileri yükleniyor...');
+                setStatus('loading', 'GitHub\'dan canlı veriler yükleniyor...');
                 
-                // Direkt test verisini yükle - En güvenilir yöntem
-                loadTestData();
+                // Try to load live data first, fallback to test data
+                loadLiveDataWithFallback();
             } else {
                 showErrorMessage('❌ Hatalı şifre! Tekrar deneyin.');
                 document.getElementById('dashboardPassword').value = '';
                 document.getElementById('dashboardPassword').focus();
             }
+        }
+
+        // Load live data with automatic fallback to test data
+        async function loadLiveDataWithFallback() {
+            try {
+                // Try loading from live sources with 10 second timeout
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Timeout: 10 saniye içinde yanıt alınamadı')), 10000)
+                );
+                
+                await Promise.race([testAllSources(), timeoutPromise]);
+                
+            } catch (error) {
+                console.warn('Live data failed, falling back to test data:', error.message);
+                
+                // Show friendly message and load test data
+                showSuccessMessage('⚡ Test verileri yükleniyor (canlı veri geçici olarak kullanılamıyor)...');
+                setTimeout(() => {
+                    loadTestData();
+                    showMessage('💡 Canlı verileri denemek için "Yenile" butonuna basabilirsiniz.', 'info');
+                }, 1000);
+            }
+        }
+
+        // Test all data sources with detailed logging
+        async function testAllSources() {
+            document.getElementById('loadingDiv').classList.add('show');
+            
+            const testResults = [];
+            
+            // Test each URL individually
+            for (let i = 0; i < FALLBACK_DATA_SOURCES.length; i++) {
+                const url = FALLBACK_DATA_SOURCES[i];
+                const sourceName = i === 0 ? 'GitHub API' : 
+                                 i === 1 ? 'AllOrigins Proxy' : 
+                                 i === 2 ? 'CorsProxy' : 'Google Sheets';
+                
+                setStatus('loading', `${sourceName} test ediliyor...`);
+                console.log(`\n=== Testing ${sourceName} ===`);
+                console.log(`URL: ${url}`);
+                
+                try {
+                    const startTime = Date.now();
+                    
+                    const response = await fetch(url, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json, text/plain, */*',
+                            'Cache-Control': 'no-cache'
+                        },
+                        signal: AbortSignal.timeout(15000) // 15 second timeout
+                    });
+                    
+                    const endTime = Date.now();
+                    const duration = endTime - startTime;
+                    
+                    console.log(`Response time: ${duration}ms`);
+                    console.log(`Status: ${response.status} ${response.statusText}`);
+                    console.log(`Headers:`, Object.fromEntries(response.headers.entries()));
+                    
+                    if (response.ok) {
+                        const responseSize = response.headers.get('content-length');
+                        console.log(`Content-Length: ${responseSize || 'unknown'}`);
+                        
+                        // Try to read the response
+                        const responseText = await response.text();
+                        console.log(`Response length: ${responseText.length} characters`);
+                        console.log(`First 200 chars:`, responseText.substring(0, 200));
+                        
+                        testResults.push({
+                            source: sourceName,
+                            url: url,
+                            status: 'SUCCESS',
+                            duration: duration,
+                            size: responseText.length,
+                            preview: responseText.substring(0, 100)
+                        });
+                        
+                        // If this is a working source, try to process it
+                        if (responseText.length > 50) {
+                            try {
+                                let csvContent = responseText;
+                                
+                                // Handle different response formats
+                                if (i === 0) {
+                                    // GitHub API - JSON with base64 content
+                                    const jsonData = JSON.parse(responseText);
+                                    if (jsonData.content) {
+                                        csvContent = atob(jsonData.content.replace(/\n/g, ''));
+                                    }
+                                } else if (i === 1 || i === 3) {
+                                    // Proxy services - JSON with contents
+                                    const jsonData = JSON.parse(responseText);
+                                    if (jsonData.contents) {
+                                        csvContent = jsonData.contents;
+                                    }
+                                }
+                                
+                                // Try CSV parsing
+                                const parsed = Papa.parse(csvContent, {
+                                    header: true,
+                                    dynamicTyping: true,
+                                    skipEmptyLines: true
+                                });
+                                
+                                if (parsed.data && parsed.data.length > 0) {
+                                    console.log(`✅ ${sourceName}: Successfully parsed ${parsed.data.length} records`);
+                                    
+                                    // Use this working source
+                                    allData = parsed.data;
+                                    lastLoadTime = new Date();
+                                    findLatestDate();
+                                    
+                                    setStatus('success', `${sourceName} ile başarılı (${allData.length} kayıt)`);
+                                    document.getElementById('fileName').textContent = `${sourceName} - ${allData.length} kayıt`;
+                                    document.getElementById('lastUpdate').textContent = 'Yükleme: ' + lastLoadTime.toLocaleString('tr-TR');
+                                    
+                                    document.getElementById('loadingDiv').classList.remove('show');
+                                    document.getElementById('filtersDiv').style.display = 'block';
+                                    document.getElementById('tableContainer').style.display = 'block';
+                                    document.getElementById('refreshBtn').style.display = 'inline-flex';
+                                    document.getElementById('exportBtn').style.display = 'inline-flex';
+                                    
+                                    updateCascadeFilters();
+                                    processAllData();
+                                    
+                                    showSuccessMessage(`✅ ${sourceName} ile veriler başarıyla yüklendi! (${allData.length} kayıt)`);
+                                    showTestResults(testResults);
+                                    return; // Success!
+                                }
+                            } catch (parseError) {
+                                console.error(`❌ ${sourceName}: Parse error:`, parseError);
+                                testResults[testResults.length - 1].status = 'PARSE_ERROR';
+                                testResults[testResults.length - 1].error = parseError.message;
+                            }
+                        }
+                    } else {
+                        console.error(`❌ ${sourceName}: HTTP ${response.status} ${response.statusText}`);
+                        testResults.push({
+                            source: sourceName,
+                            url: url,
+                            status: 'HTTP_ERROR',
+                            error: `${response.status} ${response.statusText}`,
+                            duration: duration
+                        });
+                    }
+                    
+                } catch (error) {
+                    const errorType = error.name === 'AbortError' ? 'TIMEOUT' : 'NETWORK_ERROR';
+                    console.error(`❌ ${sourceName}: ${errorType}:`, error);
+                    testResults.push({
+                        source: sourceName,
+                        url: url,
+                        status: errorType,
+                        error: error.message
+                    });
+                }
+            }
+            
+            // All sources failed - show comprehensive results
+            document.getElementById('loadingDiv').classList.remove('show');
+            setStatus('error', 'Tüm veri kaynakları başarısız');
+            showTestResults(testResults);
+            showErrorMessage('❌ Hiçbir veri kaynağından veri alınamadı.');
+        }
+
+        // Show detailed test results
+        function showTestResults(results) {
+            document.getElementById('filtersDiv').style.display = 'block';
+            document.getElementById('tableContainer').style.display = 'block';
+            document.getElementById('tableContent').innerHTML = `
+                <div class="no-data">
+                    <h3>🔍 Veri Kaynağı Test Sonuçları</h3>
+                    <p>Tüm veri kaynakları test edildi. Detaylar aşağıda:</p>
+                    
+                    <div style="background: #f8fafc; padding: 20px; border-radius: 10px; margin: 20px 0; text-align: left;">
+                        ${results.map((result, index) => `
+                            <div style="margin-bottom: 15px; padding: 15px; border-radius: 8px; 
+                                 background: ${result.status === 'SUCCESS' ? '#dcfce7' : '#fecaca'};">
+                                <h4 style="margin: 0 0 10px 0; color: ${result.status === 'SUCCESS' ? '#166534' : '#991b1b'};">
+                                    ${index + 1}. ${result.source} - ${result.status}
+                                </h4>
+                                <div style="font-family: monospace; font-size: 12px; color: #374151;">
+                                    <strong>URL:</strong> <br><span style="word-break: break-all;">${result.url}</span><br>
+                                    ${result.duration ? `<strong>Response Time:</strong> ${result.duration}ms<br>` : ''}
+                                    ${result.size ? `<strong>Data Size:</strong> ${result.size} characters<br>` : ''}
+                                    ${result.error ? `<strong>Error:</strong> ${result.error}<br>` : ''}
+                                    ${result.preview ? `<strong>Preview:</strong> ${result.preview}...<br>` : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div style="background: #dbeafe; padding: 15px; border-radius: 8px; margin: 15px 0; text-align: left;">
+                        <h4 style="color: #1e40af; margin-bottom: 10px;">💡 Çözüm Önerileri:</h4>
+                        <ul style="color: #1e40af; line-height: 1.6;">
+                            <li><strong>Browser Console:</strong> F12 açıp Console sekmesinde detayları görün</li>
+                            <li><strong>Network Tab:</strong> F12 → Network'te actual requests'i inceleyin</li>
+                            <li><strong>URL Test:</strong> Aşağıdaki URL'leri yeni sekmede test edin</li>
+                            <li><strong>Firewall/Proxy:</strong> Kurumsal network proxy engellemesi olabilir</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 15px 0; text-align: left;">
+                        <h4 style="color: #92400e; margin-bottom: 10px;">🔗 Manuel Test URL'leri:</h4>
+                        ${FALLBACK_DATA_SOURCES.map((url, i) => `
+                            <p style="margin: 5px 0;">
+                                <strong>${i + 1}.</strong> 
+                                <a href="${url}" target="_blank" style="color: #3b82f6; word-break: break-all;">${url}</a>
+                            </p>
+                        `).join('')}
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 20px;">
+                        <button class="btn btn-primary" onclick="testAllSources()">
+                            🔄 Tekrar Test Et
+                        </button>
+                        
+                        <button class="btn btn-secondary" onclick="loadTestData()">
+                            📊 Test Verileri Yükle
+                        </button>
+                        
+                        <button class="btn btn-secondary" onclick="window.open('', '_blank').document.write('<pre>' + JSON.stringify(${JSON.stringify(results)}, null, 2) + '</pre>')">
+                            📋 JSON Export
+                        </button>
+                    </div>
+                </div>
+            `;
         }
 
         // Load test data directly - No network calls
@@ -820,18 +1048,16 @@
                         } else {
                             throw new Error('GitHub API: content field missing');
                         }
-                    } else if (i === 1 || i === 3) {
-                        // Proxy services return JSON
-                        const jsonResponse = await response.json();
-                        console.log(`${sourceName} response:`, jsonResponse);
-                        
-                        if (jsonResponse.contents) {
-                            csvContent = jsonResponse.contents;
-                        } else {
-                            throw new Error(`${sourceName}: contents field missing`);
-                        }
+                    } else if (i === 1) {
+                        // AllOrigins raw proxy - Direct text response
+                        csvContent = await response.text();
+                        console.log(`${sourceName} raw text length:`, csvContent.length);
+                    } else if (i === 2) {
+                        // CorsProxy - Direct text response  
+                        csvContent = await response.text();
+                        console.log(`${sourceName} text length:`, csvContent.length);
                     } else {
-                        // Direct text response
+                        // Direct GitHub raw - text response
                         csvContent = await response.text();
                         console.log(`${sourceName} text length:`, csvContent.length);
                     }
@@ -986,71 +1212,10 @@
             }
         }
 
-        // Show sample data for testing
+        // Show sample data for immediate testing
         function showSampleData() {
-            const sampleData = [
-                {
-                    "PRODUCTCODE": "P001",
-                    "Product": "Laptop Dell XPS 13",
-                    "Marka": "Dell", 
-                    "STORE": "İstanbul Merkez",
-                    "ACCOUNT": "Teknoloji",
-                    "BÖLGE": "Marmara",
-                    "ŞEHİR": "İstanbul",
-                    "Üst Kategori": "Elektronik",
-                    "Alt Kategori": "Bilgisayar",
-                    "Stock": 25,
-                    "Sales": 8,
-                    "AvgSales": 0.3,
-                    "A/P": "Aktif"
-                },
-                {
-                    "PRODUCTCODE": "P002", 
-                    "Product": "iPhone 15 Pro",
-                    "Marka": "Apple",
-                    "STORE": "Ankara Çankaya",
-                    "ACCOUNT": "Teknoloji",
-                    "BÖLGE": "İç Anadolu", 
-                    "ŞEHİR": "Ankara",
-                    "Üst Kategori": "Elektronik",
-                    "Alt Kategori": "Telefon",
-                    "Stock": 45,
-                    "Sales": 12,
-                    "AvgSales": 0.4,
-                    "A/P": "Aktif"
-                },
-                {
-                    "PRODUCTCODE": "P003",
-                    "Product": "Samsung Galaxy S24",
-                    "Marka": "Samsung", 
-                    "STORE": "İzmir Konak",
-                    "ACCOUNT": "Teknoloji",
-                    "BÖLGE": "Ege",
-                    "ŞEHİR": "İzmir", 
-                    "Üst Kategori": "Elektronik",
-                    "Alt Kategori": "Telefon",
-                    "Stock": 15,
-                    "Sales": 5,
-                    "AvgSales": 0.2,
-                    "A/P": "Aktif"
-                }
-            ];
-            
-            allData = sampleData;
-            lastLoadTime = new Date();
-            findLatestDate();
-
-            setStatus('success', `Örnek veri yüklendi (${allData.length} kayıt)`);
-            document.getElementById('fileName').textContent = `Örnek Veri - ${allData.length} kayıt`;
-            document.getElementById('lastUpdate').textContent = 'Örnek veri: ' + lastLoadTime.toLocaleString('tr-TR');
-            
-            document.getElementById('refreshBtn').style.display = 'inline-flex';
-            document.getElementById('exportBtn').style.display = 'inline-flex';
-            
-            updateCascadeFilters();
-            processAllData();
-            
-            showSuccessMessage(`✅ Örnek veri yüklendi! Dashboard test edilebilir.`);
+            showSuccessMessage('📊 Test verileri yükleniyor...');
+            loadTestData();
         }
 
         // Find latest date in data
