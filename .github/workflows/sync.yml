@@ -1,9 +1,9 @@
-name: Google Sheets Sync - Optimized
+name: Google Sheets to JS API
 
 on:
   schedule:
-    - cron: '*/30 * * * *'  # Her 30 dakika
-  workflow_dispatch:  # Manuel çalıştırma
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
 
 jobs:
   sync:
@@ -18,48 +18,53 @@ jobs:
       with:
         node-version: '18'
 
-    - name: Download and optimize data from Google Sheets
+    - name: Download data and create JS API
       run: |
-        # Google Sheets'ten CSV indir
-        echo "📊 Google Sheets'ten veri indiriliyor..."
-        curl -L "https://docs.google.com/spreadsheets/d/1JUmhcit0KzPKppTJQGVxsWCuXCpYhmbL4KXCgTpdTyY/export?format=csv&gid=0" \
-          -o raw_data.csv
+        mkdir -p api
         
-        # Dosya boyutunu kontrol et
-        echo "📏 Dosya boyutu:"
-        ls -lh raw_data.csv
+        curl -L "https://docs.google.com/spreadsheets/d/1JUmhcit0KzPKppTJQGVxsWCuXCpYhmbL4KXCgTpdTyY/export?format=csv&gid=0" -o raw_data.csv
         
-        # İlk 1000 satırı al (dashboard için yeterli)
-        echo "✂️ Veriyi optimize ediliyor..."
         head -n 1001 raw_data.csv > data.csv
         
-        # Optimize edilmiş dosya boyutu
-        echo "📦 Optimize edilmiş boyut:"
-        ls -lh data.csv
+        node -e "
+        const fs = require('fs');
+        const csvContent = fs.readFileSync('data.csv', 'utf8');
+        const lines = csvContent.trim().split('\n');
+        const headers = lines[0].split(',').map(h => h.replace(/\"/g, ''));
+        const data = [];
         
-        # Satır sayısını say
-        echo "📊 Satır sayısı:"
-        wc -l data.csv
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(',').map(v => v.replace(/\"/g, ''));
+          const record = {};
+          headers.forEach((header, index) => {
+            const value = values[index] || '';
+            if (value && !isNaN(value) && !isNaN(parseFloat(value))) {
+              record[header] = parseFloat(value);
+            } else {
+              record[header] = value;
+            }
+          });
+          data.push(record);
+        }
+        
+        const jsContent = \`// Store API Data - Auto-generated
+// Last updated: \${new Date().toISOString()}
+
+window.STORE_DATA = {
+  lastUpdate: '\${new Date().toISOString()}',
+  recordCount: \${data.length},
+  data: \${JSON.stringify(data, null, 2)}
+};\`;
+        
+        fs.writeFileSync('api/data.js', jsContent);
+        "
 
     - name: Commit and push changes
       run: |
         git config --local user.email "actions@github.com"
         git config --local user.name "GitHub Actions"
-        
-        # Sadece data.csv değiştiyse commit et
-        if ! git diff --quiet data.csv; then
-          git add data.csv
-          git commit -m "Auto-update data $(date '+%Y-%m-%d %H:%M:%S UTC')"
+        git add data.csv api/data.js
+        if ! git diff --quiet --cached; then
+          git commit -m "Auto-update data and JS API $(date)"
           git push
-          echo "✅ Veri güncellendi ve commit edildi"
-        else
-          echo "📊 Veri değişmedi, commit gerekli değil"
         fi
-
-    - name: Create summary
-      run: |
-        echo "🎯 **Sync Summary**" >> $GITHUB_STEP_SUMMARY
-        echo "- ⏰ Sync Time: $(date)" >> $GITHUB_STEP_SUMMARY
-        echo "- 📊 Records: $(tail -n +2 data.csv | wc -l)" >> $GITHUB_STEP_SUMMARY
-        echo "- 📦 File Size: $(ls -lh data.csv | awk '{print $5}')" >> $GITHUB_STEP_SUMMARY
-        echo "- 🔗 Raw URL: https://raw.githubusercontent.com/gkobar/dashboard-project/main/data.csv" >> $GITHUB_STEP_SUMMARY
