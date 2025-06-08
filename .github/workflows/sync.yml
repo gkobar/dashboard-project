@@ -1,28 +1,65 @@
-name: Google Sheets Sync
+name: Google Sheets Sync - Optimized
+
 on:
   schedule:
-    - cron: '*/15 * * * *'
-  workflow_dispatch:
+    - cron: '*/30 * * * *'  # Her 30 dakika
+  workflow_dispatch:  # Manuel çalıştırma
 
 jobs:
   sync:
     runs-on: ubuntu-latest
+    
     steps:
-      - uses: actions/checkout@v3
-      
-      - name: Download Google Sheets
-        run: |
-          # Farklı URL formatları dene
-          curl -L "https://docs.google.com/spreadsheets/d/1JUmhcit0KzPKppTJQGVxsWCuXCpYhmbL4KXCgTpdTyY/export?format=csv" > data.csv || \
-          curl -L "https://docs.google.com/spreadsheets/d/1JUmhcit0KzPKppTJQGVxsWCuXCpYhmbL4KXCgTpdTyY/export?exportFormat=csv" > data.csv || \
-          echo "account,region,city,store,category,subcat,brand,apStatus
-          TR001,Marmara,Istanbul,Store1,Elektronik,Telefon,Samsung,Active
-          TR002,Marmara,Istanbul,Store2,Giyim,Pantolon,Nike,Active" > data.csv
-          
-      - name: Commit changes
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Download and optimize data from Google Sheets
+      run: |
+        # Google Sheets'ten CSV indir
+        echo "📊 Google Sheets'ten veri indiriliyor..."
+        curl -L "https://docs.google.com/spreadsheets/d/1JUmhcit0KzPKppTJQGVxsWCuXCpYhmbL4KXCgTpdTyY/export?format=csv&gid=0" \
+          -o raw_data.csv
+        
+        # Dosya boyutunu kontrol et
+        echo "📏 Dosya boyutu:"
+        ls -lh raw_data.csv
+        
+        # İlk 1000 satırı al (dashboard için yeterli)
+        echo "✂️ Veriyi optimize ediliyor..."
+        head -n 1001 raw_data.csv > data.csv
+        
+        # Optimize edilmiş dosya boyutu
+        echo "📦 Optimize edilmiş boyut:"
+        ls -lh data.csv
+        
+        # Satır sayısını say
+        echo "📊 Satır sayısı:"
+        wc -l data.csv
+
+    - name: Commit and push changes
+      run: |
+        git config --local user.email "actions@github.com"
+        git config --local user.name "GitHub Actions"
+        
+        # Sadece data.csv değiştiyse commit et
+        if ! git diff --quiet data.csv; then
           git add data.csv
-          git diff --staged --quiet || git commit -m "Auto-update data $(date)"
+          git commit -m "Auto-update data $(date '+%Y-%m-%d %H:%M:%S UTC')"
           git push
+          echo "✅ Veri güncellendi ve commit edildi"
+        else
+          echo "📊 Veri değişmedi, commit gerekli değil"
+        fi
+
+    - name: Create summary
+      run: |
+        echo "🎯 **Sync Summary**" >> $GITHUB_STEP_SUMMARY
+        echo "- ⏰ Sync Time: $(date)" >> $GITHUB_STEP_SUMMARY
+        echo "- 📊 Records: $(tail -n +2 data.csv | wc -l)" >> $GITHUB_STEP_SUMMARY
+        echo "- 📦 File Size: $(ls -lh data.csv | awk '{print $5}')" >> $GITHUB_STEP_SUMMARY
+        echo "- 🔗 Raw URL: https://raw.githubusercontent.com/gkobar/dashboard-project/main/data.csv" >> $GITHUB_STEP_SUMMARY
