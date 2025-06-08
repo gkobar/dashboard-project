@@ -30,11 +30,11 @@ jobs:
         const fs = require('fs');
         const csvContent = fs.readFileSync('data.csv', 'utf8');
         const lines = csvContent.trim().split('\n');
-        const headers = lines[0].split(',').map(h => h.replace(/\"/g, ''));
+        const headers = lines[0].split(',').map(h => h.replace(/\\\"/g, ''));
         const data = [];
         
         for (let i = 1; i < lines.length; i++) {
-          const values = lines[i].split(',').map(v => v.replace(/\"/g, ''));
+          const values = lines[i].split(',').map(v => v.replace(/\\\"/g, ''));
           const record = {};
           headers.forEach((header, index) => {
             const value = values[index] || '';
@@ -47,16 +47,11 @@ jobs:
           data.push(record);
         }
         
-        const jsContent = \`// Store API Data - Auto-generated
-// Last updated: \${new Date().toISOString()}
-
-window.STORE_DATA = {
-  lastUpdate: '\${new Date().toISOString()}',
-  recordCount: \${data.length},
-  data: \${JSON.stringify(data, null, 2)}
-};\`;
+        const now = new Date().toISOString();
+        const jsContent = '// Store API Data - Auto-generated\\n// Last updated: ' + now + '\\n\\nwindow.STORE_DATA = {\\n  lastUpdate: \\\"' + now + '\\\",\\n  recordCount: ' + data.length + ',\\n  data: ' + JSON.stringify(data, null, 2) + '\\n};';
         
         fs.writeFileSync('api/data.js', jsContent);
+        console.log('Created JS API with', data.length, 'records');
         "
 
     - name: Commit and push changes
