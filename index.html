@@ -171,26 +171,6 @@
             box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
         }
 
-        .upload-area {
-            border: 2px dashed #d1d5db;
-            border-radius: 10px;
-            padding: 30px;
-            text-align: center;
-            margin: 20px 0;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .upload-area:hover {
-            border-color: #4f46e5;
-            background: #f8fafc;
-        }
-
-        .upload-area.drag-over {
-            border-color: #4f46e5;
-            background: #eff6ff;
-        }
-
         .loading-div {
             text-align: center;
             padding: 50px;
@@ -351,6 +331,12 @@
             border: 1px solid #fde68a;
         }
 
+        .message.info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+        }
+
         @media (max-width: 768px) {
             .header h1 { font-size: 2rem; }
             .status-bar { flex-direction: column; gap: 15px; }
@@ -416,8 +402,6 @@
                 
                 <button class="btn btn-primary" onclick="checkPassword()">🔓 Giriş Yap</button>
             </div>
-
-            <!-- Upload Area - REMOVED -->
 
             <!-- Loading -->
             <div class="loading-div" id="loadingDiv">
@@ -499,7 +483,7 @@
                 </div>
             </div>
 
-            <!-- Table - Hidden on main page -->
+            <!-- Table -->
             <div class="table-container" id="tableContainer" style="display: none;">
                 <div class="table-header">
                     <div class="table-title">📋 Ürün Listesi</div>
@@ -532,18 +516,11 @@
         // Dashboard Configuration
         const DASHBOARD_PASSWORD = "dashboard123";
         
-        // GitHub data access URLs - Updated with correct repo
+        // GitHub data access URLs
         const FALLBACK_DATA_SOURCES = [
-            // Primary: GitHub API ile base64 decode (No CORS)
             "https://api.github.com/repos/gkobar/dashboard-project/contents/data.csv",
-            
-            // Backup: CORS Proxy ile GitHub raw - FIXED
             "https://api.allorigins.win/raw?url=" + encodeURIComponent("https://raw.githubusercontent.com/gkobar/dashboard-project/main/data.csv"),
-            
-            // Backup 2: Farklı CORS proxy
             "https://corsproxy.io/?" + encodeURIComponent("https://raw.githubusercontent.com/gkobar/dashboard-project/main/data.csv"),
-            
-            // Last resort: Direct GitHub raw (might fail due to CORS)
             "https://raw.githubusercontent.com/gkobar/dashboard-project/main/data.csv"
         ];
 
@@ -581,7 +558,7 @@
             showMessage(message, 'error');
         }
 
-        // Password Check Function - Start with test data, offer live data option
+        // Password Check Function
         function checkPassword() {
             const inputPassword = document.getElementById('dashboardPassword').value.trim();
             
@@ -591,240 +568,18 @@
                 document.getElementById('passwordSetup').style.display = 'none';
                 setStatus('loading', 'Dashboard hazırlanıyor...');
                 
-                // Start with reliable test data
                 loadTestData();
-                
-                // Show option for live data after dashboard is ready
-                setTimeout(() => {
-                    showMessage('🌐 Canlı GitHub verilerini denemek ister misiniz? "Yenile" butonuna basın.', 'info');
-                }, 3000);
             } else {
                 showErrorMessage('❌ Hatalı şifre! Tekrar deneyin.');
                 document.getElementById('dashboardPassword').value = '';
                 document.getElementById('dashboardPassword').focus();
             }
-        } falling back to test data:', error.message);
-                
-                // Show friendly message and load test data
-                showSuccessMessage('⚡ Test verileri yükleniyor (canlı veri geçici olarak kullanılamıyor)...');
-                setTimeout(() => {
-                    loadTestData();
-                    showMessage('💡 Canlı verileri denemek için "Yenile" butonuna basabilirsiniz.', 'info');
-                }, 1000);
-            }
         }
 
-        // Test all data sources with detailed logging
-        async function testAllSources() {
-            document.getElementById('loadingDiv').classList.add('show');
-            
-            const testResults = [];
-            
-            // Test each URL individually
-            for (let i = 0; i < FALLBACK_DATA_SOURCES.length; i++) {
-                const url = FALLBACK_DATA_SOURCES[i];
-                const sourceName = i === 0 ? 'GitHub API' : 
-                                 i === 1 ? 'AllOrigins Proxy' : 
-                                 i === 2 ? 'CorsProxy' : 'Google Sheets';
-                
-                setStatus('loading', `${sourceName} test ediliyor...`);
-                console.log(`\n=== Testing ${sourceName} ===`);
-                console.log(`URL: ${url}`);
-                
-                try {
-                    const startTime = Date.now();
-                    
-                    const response = await fetch(url, {
-                        method: 'GET',
-                        headers: {
-                            'Accept': 'application/json, text/plain, */*',
-                            'Cache-Control': 'no-cache'
-                        },
-                        signal: AbortSignal.timeout(15000) // 15 second timeout
-                    });
-                    
-                    const endTime = Date.now();
-                    const duration = endTime - startTime;
-                    
-                    console.log(`Response time: ${duration}ms`);
-                    console.log(`Status: ${response.status} ${response.statusText}`);
-                    console.log(`Headers:`, Object.fromEntries(response.headers.entries()));
-                    
-                    if (response.ok) {
-                        const responseSize = response.headers.get('content-length');
-                        console.log(`Content-Length: ${responseSize || 'unknown'}`);
-                        
-                        // Try to read the response
-                        const responseText = await response.text();
-                        console.log(`Response length: ${responseText.length} characters`);
-                        console.log(`First 200 chars:`, responseText.substring(0, 200));
-                        
-                        testResults.push({
-                            source: sourceName,
-                            url: url,
-                            status: 'SUCCESS',
-                            duration: duration,
-                            size: responseText.length,
-                            preview: responseText.substring(0, 100)
-                        });
-                        
-                        // If this is a working source, try to process it
-                        if (responseText.length > 50) {
-                            try {
-                                let csvContent = responseText;
-                                
-                                // Handle different response formats
-                                if (i === 0) {
-                                    // GitHub API - JSON with base64 content
-                                    const jsonData = JSON.parse(responseText);
-                                    if (jsonData.content) {
-                                        csvContent = atob(jsonData.content.replace(/\n/g, ''));
-                                    }
-                                } else if (i === 1 || i === 3) {
-                                    // Proxy services - JSON with contents
-                                    const jsonData = JSON.parse(responseText);
-                                    if (jsonData.contents) {
-                                        csvContent = jsonData.contents;
-                                    }
-                                }
-                                
-                                // Try CSV parsing
-                                const parsed = Papa.parse(csvContent, {
-                                    header: true,
-                                    dynamicTyping: true,
-                                    skipEmptyLines: true
-                                });
-                                
-                                if (parsed.data && parsed.data.length > 0) {
-                                    console.log(`✅ ${sourceName}: Successfully parsed ${parsed.data.length} records`);
-                                    
-                                    // Use this working source
-                                    allData = parsed.data;
-                                    lastLoadTime = new Date();
-                                    findLatestDate();
-                                    
-                                    setStatus('success', `${sourceName} ile başarılı (${allData.length} kayıt)`);
-                                    document.getElementById('fileName').textContent = `${sourceName} - ${allData.length} kayıt`;
-                                    document.getElementById('lastUpdate').textContent = 'Yükleme: ' + lastLoadTime.toLocaleString('tr-TR');
-                                    
-                                    document.getElementById('loadingDiv').classList.remove('show');
-                                    document.getElementById('filtersDiv').style.display = 'block';
-                                    document.getElementById('tableContainer').style.display = 'block';
-                                    document.getElementById('refreshBtn').style.display = 'inline-flex';
-                                    document.getElementById('exportBtn').style.display = 'inline-flex';
-                                    
-                                    updateCascadeFilters();
-                                    processAllData();
-                                    
-                                    showSuccessMessage(`✅ ${sourceName} ile veriler başarıyla yüklendi! (${allData.length} kayıt)`);
-                                    showTestResults(testResults);
-                                    return; // Success!
-                                }
-                            } catch (parseError) {
-                                console.error(`❌ ${sourceName}: Parse error:`, parseError);
-                                testResults[testResults.length - 1].status = 'PARSE_ERROR';
-                                testResults[testResults.length - 1].error = parseError.message;
-                            }
-                        }
-                    } else {
-                        console.error(`❌ ${sourceName}: HTTP ${response.status} ${response.statusText}`);
-                        testResults.push({
-                            source: sourceName,
-                            url: url,
-                            status: 'HTTP_ERROR',
-                            error: `${response.status} ${response.statusText}`,
-                            duration: duration
-                        });
-                    }
-                    
-                } catch (error) {
-                    const errorType = error.name === 'AbortError' ? 'TIMEOUT' : 'NETWORK_ERROR';
-                    console.error(`❌ ${sourceName}: ${errorType}:`, error);
-                    testResults.push({
-                        source: sourceName,
-                        url: url,
-                        status: errorType,
-                        error: error.message
-                    });
-                }
-            }
-            
-            // All sources failed - show comprehensive results
-            document.getElementById('loadingDiv').classList.remove('show');
-            setStatus('error', 'Tüm veri kaynakları başarısız');
-            showTestResults(testResults);
-            showErrorMessage('❌ Hiçbir veri kaynağından veri alınamadı.');
-        }
-
-        // Show detailed test results
-        function showTestResults(results) {
-            document.getElementById('filtersDiv').style.display = 'block';
-            document.getElementById('tableContainer').style.display = 'block';
-            document.getElementById('tableContent').innerHTML = `
-                <div class="no-data">
-                    <h3>🔍 Veri Kaynağı Test Sonuçları</h3>
-                    <p>Tüm veri kaynakları test edildi. Detaylar aşağıda:</p>
-                    
-                    <div style="background: #f8fafc; padding: 20px; border-radius: 10px; margin: 20px 0; text-align: left;">
-                        ${results.map((result, index) => `
-                            <div style="margin-bottom: 15px; padding: 15px; border-radius: 8px; 
-                                 background: ${result.status === 'SUCCESS' ? '#dcfce7' : '#fecaca'};">
-                                <h4 style="margin: 0 0 10px 0; color: ${result.status === 'SUCCESS' ? '#166534' : '#991b1b'};">
-                                    ${index + 1}. ${result.source} - ${result.status}
-                                </h4>
-                                <div style="font-family: monospace; font-size: 12px; color: #374151;">
-                                    <strong>URL:</strong> <br><span style="word-break: break-all;">${result.url}</span><br>
-                                    ${result.duration ? `<strong>Response Time:</strong> ${result.duration}ms<br>` : ''}
-                                    ${result.size ? `<strong>Data Size:</strong> ${result.size} characters<br>` : ''}
-                                    ${result.error ? `<strong>Error:</strong> ${result.error}<br>` : ''}
-                                    ${result.preview ? `<strong>Preview:</strong> ${result.preview}...<br>` : ''}
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                    
-                    <div style="background: #dbeafe; padding: 15px; border-radius: 8px; margin: 15px 0; text-align: left;">
-                        <h4 style="color: #1e40af; margin-bottom: 10px;">💡 Çözüm Önerileri:</h4>
-                        <ul style="color: #1e40af; line-height: 1.6;">
-                            <li><strong>Browser Console:</strong> F12 açıp Console sekmesinde detayları görün</li>
-                            <li><strong>Network Tab:</strong> F12 → Network'te actual requests'i inceleyin</li>
-                            <li><strong>URL Test:</strong> Aşağıdaki URL'leri yeni sekmede test edin</li>
-                            <li><strong>Firewall/Proxy:</strong> Kurumsal network proxy engellemesi olabilir</li>
-                        </ul>
-                    </div>
-                    
-                    <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 15px 0; text-align: left;">
-                        <h4 style="color: #92400e; margin-bottom: 10px;">🔗 Manuel Test URL'leri:</h4>
-                        ${FALLBACK_DATA_SOURCES.map((url, i) => `
-                            <p style="margin: 5px 0;">
-                                <strong>${i + 1}.</strong> 
-                                <a href="${url}" target="_blank" style="color: #3b82f6; word-break: break-all;">${url}</a>
-                            </p>
-                        `).join('')}
-                    </div>
-                    
-                    <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 20px;">
-                        <button class="btn btn-primary" onclick="testAllSources()">
-                            🔄 Tekrar Test Et
-                        </button>
-                        
-                        <button class="btn btn-secondary" onclick="loadTestData()">
-                            📊 Test Verileri Yükle
-                        </button>
-                        
-                        <button class="btn btn-secondary" onclick="window.open('', '_blank').document.write('<pre>' + JSON.stringify(${JSON.stringify(results)}, null, 2) + '</pre>')">
-                            📋 JSON Export
-                        </button>
-                    </div>
-                </div>
-            `;
-        }
-
-        // Load test data directly - No network calls
+        // Load test data
         function loadTestData() {
             document.getElementById('loadingDiv').classList.add('show');
             
-            // Simulate loading delay
             setTimeout(() => {
                 const testData = [
                     {
@@ -975,10 +730,10 @@
                 processAllData();
                 
                 showSuccessMessage(`✅ Test verileri başarıyla yüklendi! Dashboard hazır.`);
-            }, 1500); // 1.5 saniye gecikme
+            }, 1500);
         }
 
-        // Load from GitHub API with better error handling
+        // Load from external sources
         async function loadFromGoogleSheets() {
             document.getElementById('loadingDiv').classList.add('show');
             setStatus('loading', 'Veri kaynakları test ediliyor...');
@@ -990,33 +745,24 @@
                     const url = FALLBACK_DATA_SOURCES[i];
                     const sourceName = i === 0 ? 'GitHub API' : 
                                      i === 1 ? 'AllOrigins Proxy' : 
-                                     i === 2 ? 'CorsProxy' : 'Google Sheets';
+                                     i === 2 ? 'CorsProxy' : 'GitHub Raw';
                     
                     setStatus('loading', `${sourceName} test ediliyor...`);
                     console.log(`Attempting to load from: ${sourceName} - ${url}`);
                     
-                    // Add timeout to fetch
                     const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+                    const timeoutId = setTimeout(() => controller.abort(), 10000);
                     
                     const response = await fetch(url, {
                         method: 'GET',
                         headers: {
                             'Accept': 'application/json, text/plain, */*'
-                            // Removed Cache-Control header - causes CORS preflight issues
                         },
                         signal: controller.signal,
-                        mode: 'cors' // Explicitly set CORS mode
+                        mode: 'cors'
                     });
                     
                     clearTimeout(timeoutId);
-                    
-                    console.log(`Response from ${sourceName}:`, {
-                        status: response.status,
-                        statusText: response.statusText,
-                        ok: response.ok,
-                        headers: Object.fromEntries(response.headers.entries())
-                    });
                     
                     if (!response.ok) {
                         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -1025,540 +771,25 @@
                     let csvContent;
                     
                     if (i === 0) {
-                        // GitHub API - Base64 decode
                         const jsonResponse = await response.json();
-                        console.log('GitHub API response:', jsonResponse);
-                        
                         if (jsonResponse.content) {
                             try {
                                 csvContent = atob(jsonResponse.content.replace(/\n/g, ''));
-                                console.log('Successfully decoded base64 content');
                             } catch (decodeError) {
                                 throw new Error(`Base64 decode error: ${decodeError.message}`);
                             }
                         } else {
                             throw new Error('GitHub API: content field missing');
                         }
-                    } else if (i === 1) {
-                        // AllOrigins raw proxy - Direct text response
-                        csvContent = await response.text();
-                        console.log(`${sourceName} raw text length:`, csvContent.length);
-                    } else if (i === 2) {
-                        // CorsProxy - Direct text response  
-                        csvContent = await response.text();
-                        console.log(`${sourceName} text length:`, csvContent.length);
                     } else {
-                        // Direct GitHub raw - text response
                         csvContent = await response.text();
-                        console.log(`${sourceName} text length:`, csvContent.length);
                     }
                     
                     if (!csvContent || csvContent.length < 50) {
                         throw new Error(`${sourceName}: Empty or too short data (${csvContent?.length || 0} chars)`);
                     }
 
-                    // Test CSV parsing
-                    console.log('Parsing CSV...');
                     const parsed = Papa.parse(csvContent, {
                         header: true,
                         dynamicTyping: true,
                         skipEmptyLines: true,
-                        encoding: 'UTF-8'
-                    });
-                    
-                    console.log('Papa Parse result:', {
-                        errors: parsed.errors,
-                        meta: parsed.meta,
-                        dataLength: parsed.data?.length
-                    });
-
-                    if (parsed.errors && parsed.errors.length > 0) {
-                        console.warn('CSV parsing errors:', parsed.errors);
-                    }
-
-                    if (parsed.data && parsed.data.length > 0) {
-                        allData = parsed.data;
-                        lastLoadTime = new Date();
-                        findLatestDate();
-
-                        setStatus('success', `${sourceName} ile başarılı (${allData.length} kayıt)`);
-                        
-                        const fileName = i === 0 ? 
-                            `GitHub API → data.csv (${allData.length} kayıt)` : 
-                            `${sourceName} → GitHub (${allData.length} kayıt)`;
-                            
-                        document.getElementById('fileName').textContent = fileName;
-                        document.getElementById('lastUpdate').textContent = 'Yükleme: ' + lastLoadTime.toLocaleString('tr-TR');
-                        
-                        document.getElementById('loadingDiv').classList.remove('show');
-                        document.getElementById('filtersDiv').style.display = 'block';
-                        document.getElementById('tableContainer').style.display = 'block';
-                        document.getElementById('refreshBtn').style.display = 'inline-flex';
-                        document.getElementById('exportBtn').style.display = 'inline-flex';
-                        
-                        updateCascadeFilters();
-                        processAllData();
-                        
-                        showSuccessMessage(`✅ ${sourceName} ile veriler başarıyla yüklendi! (${allData.length} kayıt)`);
-                        console.log('Data loaded successfully:', allData.slice(0, 3)); // Show first 3 records
-                        return; // Success, exit the loop
-                    } else {
-                        throw new Error(`${sourceName}: No valid data found (${parsed.data?.length || 0} records)`);
-                    }
-                    
-                } catch (error) {
-                    const errorMsg = `${FALLBACK_DATA_SOURCES[i].includes('github.com') ? 'GitHub' : 'Proxy'} Source ${i + 1}: ${error.message}`;
-                    console.error(errorMsg, error);
-                    errors.push(errorMsg);
-                    continue; // Try next source
-                }
-            }
-            
-            // All sources failed - Show detailed error
-            document.getElementById('loadingDiv').classList.remove('show');
-            setStatus('error', 'Tüm veri kaynakları başarısız');
-            showErrorMessage('❌ Hiçbir veri kaynağına erişilemiyor.');
-            
-            // Show comprehensive error analysis
-            document.getElementById('filtersDiv').style.display = 'block';
-            document.getElementById('tableContainer').style.display = 'block';
-            document.getElementById('tableContent').innerHTML = `
-                <div class="no-data">
-                    <h3>❌ Veri Yükleme Başarısız</h3>
-                    <p>Tüm veri kaynakları test edildi ancak hiçbiri çalışmıyor.</p>
-                    
-                    <div style="background: #fef3c7; padding: 20px; border-radius: 10px; margin: 20px 0; text-align: left;">
-                        <h4 style="color: #92400e; margin-bottom: 15px;">🔍 Hata Detayları:</h4>
-                        <div style="font-family: monospace; font-size: 12px; color: #92400e; background: #fff; padding: 10px; border-radius: 5px; max-height: 200px; overflow-y: auto;">
-                            ${errors.map(error => `• ${error}`).join('<br>')}
-                        </div>
-                    </div>
-                    
-                    <div style="background: #dbeafe; padding: 15px; border-radius: 8px; margin: 15px 0; text-align: left;">
-                        <h4 style="color: #1e40af; margin-bottom: 10px;">🛠️ Olası Çözümler:</h4>
-                        <ol style="color: #1e40af; line-height: 1.6;">
-                            <li><strong>GitHub Actions:</strong> <a href="https://github.com/gkobar/dashboard-project/actions" target="_blank">Workflow durumunu kontrol edin</a></li>
-                            <li><strong>data.csv:</strong> <a href="https://github.com/gkobar/dashboard-project/blob/main/data.csv" target="_blank">Dosyanın varlığını kontrol edin</a></li>
-                            <li><strong>Network:</strong> İnternet bağlantınızı kontrol edin</li>
-                            <li><strong>CORS/Proxy:</strong> Proxy servisleri geçici olarak down olabilir</li>
-                            <li><strong>Browser:</strong> Farklı browser veya gizli mod deneyin</li>
-                        </ol>
-                    </div>
-                    
-                    <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                        <button class="btn btn-primary" onclick="loadFromGoogleSheets()">
-                            🔄 Tekrar Dene
-                        </button>
-                        
-                        <button class="btn btn-secondary" onclick="showSampleData()">
-                            📊 Örnek Veri
-                        </button>
-                        
-                        <button class="btn btn-secondary" onclick="showDebugInfo()">
-                            🔍 Debug Info
-                        </button>
-                    </div>
-                </div>
-            `;
-        }
-
-        // Show debug information
-        function showDebugInfo() {
-            const debugInfo = {
-                userAgent: navigator.userAgent,
-                location: window.location.href,
-                timestamp: new Date().toISOString(),
-                sources: FALLBACK_DATA_SOURCES
-            };
-            
-            console.log('Debug Info:', debugInfo);
-            
-            const debugWindow = window.open('', '_blank', 'width=800,height=600');
-            debugWindow.document.write(`
-                <html>
-                <head><title>Dashboard Debug Info</title></head>
-                <body style="font-family: monospace; padding: 20px;">
-                    <h2>Dashboard Debug Information</h2>
-                    <pre>${JSON.stringify(debugInfo, null, 2)}</pre>
-                    <h3>Test URLs:</h3>
-                    ${FALLBACK_DATA_SOURCES.map((url, i) => `
-                        <p><strong>Source ${i + 1}:</strong><br>
-                        <a href="${url}" target="_blank">${url}</a></p>
-                    `).join('')}
-                </body>
-                </html>
-            `);
-        }
-
-        // Setup password input
-        function setupPasswordInput() {
-            const passwordInput = document.getElementById('dashboardPassword');
-            if (passwordInput) {
-                passwordInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        checkPassword();
-                    }
-                });
-                passwordInput.focus();
-            }
-        }
-
-        // Show sample data for immediate testing
-        function showSampleData() {
-            showSuccessMessage('📊 Test verileri yükleniyor...');
-            loadTestData();
-        }
-
-        // Find latest date in data
-        function findLatestDate() {
-            if (allData.length === 0) return;
-            
-            const dates = [];
-            allData.forEach(row => {
-                // Try different date field names
-                const dateFields = ['Date', 'date', 'Tarih', 'tarih', 'DATE'];
-                for (let field of dateFields) {
-                    if (row[field]) {
-                        const date = new Date(row[field]);
-                        if (!isNaN(date.getTime())) {
-                            dates.push(date);
-                            break;
-                        }
-                    }
-                }
-            });
-            
-            if (dates.length > 0) {
-                latestDate = new Date(Math.max(...dates));
-                console.log('Latest date found:', latestDate.toLocaleDateString('tr-TR'));
-            } else {
-                latestDate = new Date();
-            }
-        }
-
-        // Update cascade filters
-        function updateCascadeFilters() {
-            const fieldMappings = {
-                'account': ['ACCOUNT', 'Account', 'account', 'Hesap'],
-                'region': ['BÖLGE', 'Region', 'region', 'Bölge', 'REGION'],
-                'city': ['ŞEHİR', 'City', 'city', 'Şehir', 'CITY'],
-                'store': ['STORE', 'Store', 'store', 'Mağaza', 'MAGAZA'],
-                'category': ['Üst Kategori', 'Category', 'category', 'Kategori', 'KATEGORI'],
-                'subcat': ['Alt Kategori', 'Subcategory', 'subcategory', 'AltKategori'],
-                'brand': ['Marka', 'Brand', 'brand', 'MARKA', 'BRAND']
-            };
-
-            Object.keys(fieldMappings).forEach(selectId => {
-                const possibleFields = fieldMappings[selectId];
-                let values = [];
-                
-                for (let field of possibleFields) {
-                    const fieldValues = [...new Set(allData.map(row => row[field]).filter(Boolean))];
-                    if (fieldValues.length > 0) {
-                        values = fieldValues;
-                        break;
-                    }
-                }
-                
-                updateSelectOptions(selectId, values.sort());
-            });
-        }
-
-        // Update select options
-        function updateSelectOptions(selectId, options) {
-            const select = document.getElementById(selectId);
-            if (select) {
-                const currentValue = select.value;
-                select.innerHTML = '<option value="">Tümü</option>';
-                options.forEach(option => {
-                    const selected = option === currentValue ? 'selected' : '';
-                    select.innerHTML += `<option value="${option}" ${selected}>${option}</option>`;
-                });
-            }
-        }
-
-        // Process all data
-        function processAllData() {
-            processedData = processData(allData);
-            filteredData = [...processedData];
-            applyFilters();
-        }
-
-        // Process data with calculations
-        function processData(rawData) {
-            const today = latestDate || new Date();
-            
-            return rawData.map(row => {
-                const processed = { ...row };
-                
-                // Calculate stock metrics
-                const stock = parseFloat(row.Stock || row.stock || row.STOCK || 0);
-                const sales = parseFloat(row.Sales || row.sales || row.SALES || 0);
-                const avgSales = parseFloat(row.AvgSales || row.avgsales || row.AVGSALES || 0);
-                
-                // Calculate turnover days
-                if (avgSales > 0) {
-                    processed.turnoverDays = Math.round(stock / avgSales);
-                } else {
-                    processed.turnoverDays = 999;
-                }
-                
-                // Determine status
-                if (sales === 0 && avgSales === 0) {
-                    processed.status = 'problem';
-                    processed.turnoverCategory = 'problem';
-                } else if (processed.turnoverDays <= 45) {
-                    processed.status = 'düşük';
-                    processed.turnoverCategory = 'düşük';
-                } else if (processed.turnoverDays <= 90) {
-                    processed.status = 'normal';
-                    processed.turnoverCategory = 'normal';
-                } else {
-                    processed.status = 'yüksek';
-                    processed.turnoverCategory = 'yüksek';
-                }
-                
-                return processed;
-            });
-        }
-
-        // Apply filters
-        function applyFilters() {
-            if (!processedData || processedData.length === 0) return;
-            
-            const filters = {
-                account: document.getElementById('account').value,
-                region: document.getElementById('region').value,
-                city: document.getElementById('city').value,
-                store: document.getElementById('store').value,
-                category: document.getElementById('category').value,
-                subcat: document.getElementById('subcat').value,
-                brand: document.getElementById('brand').value,
-                turnover: document.getElementById('turnover').value,
-                status: document.getElementById('status').value,
-                apStatus: document.getElementById('apStatus').value,
-                search: document.getElementById('search').value.toLowerCase()
-            };
-            
-            filteredData = processedData.filter(row => {
-                // Field mappings for flexible filtering
-                const account = getFieldValue(row, ['ACCOUNT', 'Account', 'account', 'Hesap']);
-                const region = getFieldValue(row, ['BÖLGE', 'Region', 'region', 'Bölge']);
-                const city = getFieldValue(row, ['ŞEHİR', 'City', 'city', 'Şehir']);
-                const store = getFieldValue(row, ['STORE', 'Store', 'store', 'Mağaza']);
-                const category = getFieldValue(row, ['Üst Kategori', 'Category', 'category', 'Kategori']);
-                const subcat = getFieldValue(row, ['Alt Kategori', 'Subcategory', 'subcategory']);
-                const brand = getFieldValue(row, ['Marka', 'Brand', 'brand']);
-                const productCode = getFieldValue(row, ['PRODUCTCODE', 'ProductCode', 'Code', 'Kod']);
-                const productName = getFieldValue(row, ['Product', 'ProductName', 'Ürün', 'UrunAdi']);
-                const apStatus = getFieldValue(row, ['A/P', 'AP', 'Status', 'Durum']);
-                
-                // Apply filters
-                if (filters.account && account !== filters.account) return false;
-                if (filters.region && region !== filters.region) return false;
-                if (filters.city && city !== filters.city) return false;
-                if (filters.store && store !== filters.store) return false;
-                if (filters.category && category !== filters.category) return false;
-                if (filters.subcat && subcat !== filters.subcat) return false;
-                if (filters.brand && brand !== filters.brand) return false;
-                if (filters.turnover && row.turnoverCategory !== filters.turnover) return false;
-                if (filters.status && row.status !== filters.status) return false;
-                if (filters.apStatus && apStatus !== filters.apStatus) return false;
-                
-                // Search filter
-                if (filters.search) {
-                    const searchFields = [productCode, productName, brand].join(' ').toLowerCase();
-                    if (!searchFields.includes(filters.search)) return false;
-                }
-                
-                return true;
-            });
-            
-            updateFilterCount();
-            displayTable();
-        }
-
-        // Helper function to get field value
-        function getFieldValue(row, possibleFields) {
-            for (let field of possibleFields) {
-                if (row[field] !== undefined && row[field] !== null) {
-                    return String(row[field]);
-                }
-            }
-            return '';
-        }
-
-        // Update filter count
-        function updateFilterCount() {
-            const total = processedData.length;
-            const filtered = filteredData.length;
-            document.getElementById('filterCount').textContent = 
-                `${filtered.toLocaleString('tr-TR')} / ${total.toLocaleString('tr-TR')} ürün gösteriliyor`;
-        }
-
-        // Reset filters
-        function resetFilters() {
-            document.getElementById('account').value = '';
-            document.getElementById('region').value = '';
-            document.getElementById('city').value = '';
-            document.getElementById('store').value = '';
-            document.getElementById('category').value = '';
-            document.getElementById('subcat').value = '';
-            document.getElementById('brand').value = '';
-            document.getElementById('turnover').value = '';
-            document.getElementById('status').value = '';
-            document.getElementById('apStatus').value = 'Aktif';
-            document.getElementById('search').value = '';
-            
-            applyFilters();
-        }
-
-        // Display table
-        function displayTable() {
-            const tableContent = document.getElementById('tableContent');
-            const tableStats = document.getElementById('tableStats');
-            
-            if (!filteredData || filteredData.length === 0) {
-                tableContent.innerHTML = `
-                    <div class="no-data">
-                        <h3>📊 Veri Bulunamadı</h3>
-                        <p>Seçilen filtrelere uygun veri bulunamadı.</p>
-                    </div>
-                `;
-                tableStats.textContent = '0 ürün';
-                return;
-            }
-            
-            // Sort data
-            const sortedData = [...filteredData].sort((a, b) => {
-                const aVal = a[currentSort.column] || '';
-                const bVal = b[currentSort.column] || '';
-                
-                if (currentSort.direction === 'asc') {
-                    return aVal > bVal ? 1 : -1;
-                } else {
-                    return aVal < bVal ? 1 : -1;
-                }
-            });
-            
-            // Generate table HTML
-            let tableHTML = `
-                <div class="table-scroll">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th onclick="sortTable('code')">📦 Kod</th>
-                                <th onclick="sortTable('product')">🏷️ Ürün</th>
-                                <th onclick="sortTable('brand')">🏪 Marka</th>
-                                <th onclick="sortTable('store')">🏢 Mağaza</th>
-                                <th onclick="sortTable('stock')">📊 Stok</th>
-                                <th onclick="sortTable('sales')">💰 Satış</th>
-                                <th onclick="sortTable('turnoverDays')">⚡ Devir (Gün)</th>
-                                <th onclick="sortTable('status')">📈 Durum</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-            `;
-            
-            sortedData.forEach(row => {
-                const code = getFieldValue(row, ['PRODUCTCODE', 'ProductCode', 'Code', 'Kod']);
-                const product = getFieldValue(row, ['Product', 'ProductName', 'Ürün', 'UrunAdi']);
-                const brand = getFieldValue(row, ['Marka', 'Brand', 'brand']);
-                const store = getFieldValue(row, ['STORE', 'Store', 'store', 'Mağaza']);
-                const stock = parseFloat(getFieldValue(row, ['Stock', 'stock', 'STOCK']) || 0);
-                const sales = parseFloat(getFieldValue(row, ['Sales', 'sales', 'SALES']) || 0);
-                
-                tableHTML += `
-                    <tr>
-                        <td data-label="Kod">${code}</td>
-                        <td data-label="Ürün">${product}</td>
-                        <td data-label="Marka">${brand}</td>
-                        <td data-label="Mağaza">${store}</td>
-                        <td data-label="Stok">${stock.toLocaleString('tr-TR')}</td>
-                        <td data-label="Satış">${sales.toLocaleString('tr-TR')}</td>
-                        <td data-label="Devir">${row.turnoverDays === 999 ? '∞' : row.turnoverDays}</td>
-                        <td data-label="Durum"><span class="status-${row.status}">${row.status.toUpperCase()}</span></td>
-                    </tr>
-                `;
-            });
-            
-            tableHTML += `
-                        </tbody>
-                    </table>
-                </div>
-            `;
-            
-            tableContent.innerHTML = tableHTML;
-            tableStats.textContent = `${filteredData.length.toLocaleString('tr-TR')} ürün`;
-        }
-
-        // Sort table
-        function sortTable(column) {
-            if (currentSort.column === column) {
-                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
-            } else {
-                currentSort.column = column;
-                currentSort.direction = 'asc';
-            }
-            displayTable();
-        }
-
-        // Export data
-        function exportData() {
-            if (!filteredData || filteredData.length === 0) {
-                showErrorMessage('❌ Dışa aktarılacak veri bulunamadı!');
-                return;
-            }
-            
-            try {
-                const worksheet = XLSX.utils.json_to_sheet(filteredData);
-                const workbook = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(workbook, worksheet, 'Filtered Data');
-                
-                const fileName = `store_data_filtered_${new Date().toISOString().slice(0, 10)}.xlsx`;
-                XLSX.writeFile(workbook, fileName);
-                
-                showSuccessMessage(`✅ Veriler ${fileName} olarak dışa aktarıldı!`);
-            } catch (error) {
-                showErrorMessage('❌ Dışa aktarma sırasında hata oluştu: ' + error.message);
-            }
-        }
-
-        // Refresh data - Load from external sources or test data
-        function refreshData() {
-            if (!isAuthenticated) {
-                showErrorMessage('❌ Önce giriş yapmalısınız!');
-                return;
-            }
-            
-            // Show choice dialog
-            const choice = confirm(
-                '🔄 Veri Yenileme\n\n' +
-                'OK: GitHub/Google Sheets\'den canlı veri çekmeyi dene\n' +
-                'İptal: Test verisini yeniden yükle'
-            );
-            
-            if (choice) {
-                showSuccessMessage('🌐 Canlı veriler deneniyor...');
-                loadFromGoogleSheets();
-            } else {
-                showSuccessMessage('📊 Test verileri yenileniyor...');
-                loadTestData();
-            }
-        }
-
-        // Initialize dashboard
-        function initDashboard() {
-            setStatus('warning', 'Giriş gerekli');
-            setupPasswordInput();
-            
-            // Show password setup only
-            document.getElementById('passwordSetup').style.display = 'block';
-            document.getElementById('filtersDiv').style.display = 'none';
-        }
-
-        // Start when page loads
-        document.addEventListener('DOMContentLoaded', initDashboard);
-    </script>
-</body>
-</html>
