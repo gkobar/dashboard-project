@@ -1,0 +1,49 @@
+name: Test Google Sheets URLs
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Test different Google Sheets URLs
+      run: |
+        echo "🧪 Testing different Google Sheets export URLs..."
+        
+        # URL 1: Original with gid=0
+        echo "=== URL 1: gid=0 ==="
+        curl -v "https://docs.google.com/spreadsheets/d/1JUmhcit0KzPKppTJQGVxsWCuXCpYhmbL4KXCgTpdTyY/export?format=csv&gid=0" -o test1.csv
+        echo "File size:" && wc -c test1.csv
+        echo "First 200 chars:" && head -c 200 test1.csv
+        echo ""
+        
+        # URL 2: Without gid
+        echo "=== URL 2: No gid ==="
+        curl -v "https://docs.google.com/spreadsheets/d/1JUmhcit0KzPKppTJQGVxsWCuXCpYhmbL4KXCgTpdTyY/export?format=csv" -o test2.csv
+        echo "File size:" && wc -c test2.csv
+        echo "First 200 chars:" && head -c 200 test2.csv
+        echo ""
+        
+        # URL 3: Different format
+        echo "=== URL 3: exportFormat ==="
+        curl -v "https://docs.google.com/spreadsheets/d/1JUmhcit0KzPKppTJQGVxsWCuXCpYhmbL4KXCgTpdTyY/export?exportFormat=csv" -o test3.csv
+        echo "File size:" && wc -c test3.csv
+        echo "First 200 chars:" && head -c 200 test3.csv
+        echo ""
+        
+        # URL 4: Download format
+        echo "=== URL 4: download ==="
+        curl -v "https://docs.google.com/spreadsheets/d/1JUmhcit0KzPKppTJQGVxsWCuXCpYhmbL4KXCgTpdTyY/gviz/tq?tqx=out:csv" -o test4.csv
+        echo "File size:" && wc -c test4.csv
+        echo "First 200 chars:" && head -c 200 test4.csv
+        echo ""
+        
+        # Test with different user agent
+        echo "=== URL 5: With User-Agent ==="
+        curl -v -H "User-Agent: curl/7.68.0" "https://docs.google.com/spreadsheets/d/1JUmhcit0KzPKppTJQGVxsWCuXCpYhmbL4KXCgTpdTyY/export?format=csv&gid=0" -o test5.csv
+        echo "File size:" && wc -c test5.csv
+        echo "First 200 chars:" && head -c 200 test5.csv
+        
+        echo "🎯 Test completed!"
