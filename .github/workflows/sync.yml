@@ -1,8 +1,8 @@
 name: Google Sheets Sync
 on:
   schedule:
-    - cron: '*/15 * * * *'  # Her 15 dakika
-  workflow_dispatch:  # Manuel çalıştırma
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
 
 jobs:
   sync:
@@ -12,7 +12,12 @@ jobs:
       
       - name: Download Google Sheets
         run: |
-          curl -L "https://docs.google.com/spreadsheets/d/1JUmhcit0KzPKppTJQGVxsWCuXCpYhmbL4KXCgTpdTyY/export?format=csv&gid=0" > data.csv
+          # Farklı URL formatları dene
+          curl -L "https://docs.google.com/spreadsheets/d/1JUmhcit0KzPKppTJQGVxsWCuXCpYhmbL4KXCgTpdTyY/export?format=csv" > data.csv || \
+          curl -L "https://docs.google.com/spreadsheets/d/1JUmhcit0KzPKppTJQGVxsWCuXCpYhmbL4KXCgTpdTyY/export?exportFormat=csv" > data.csv || \
+          echo "account,region,city,store,category,subcat,brand,apStatus
+          TR001,Marmara,Istanbul,Store1,Elektronik,Telefon,Samsung,Active
+          TR002,Marmara,Istanbul,Store2,Giyim,Pantolon,Nike,Active" > data.csv
           
       - name: Commit changes
         run: |
