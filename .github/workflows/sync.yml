@@ -1,0 +1,23 @@
+name: Google Sheets Sync
+on:
+  schedule:
+    - cron: '*/15 * * * *'  # Her 15 dakika
+  workflow_dispatch:  # Manuel çalıştırma
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Download Google Sheets
+        run: |
+          curl -L "https://docs.google.com/spreadsheets/d/1JUmhcit0KzPKppTJQGVxsWCuXCpYhmbL4KXCgTpdTyY/export?format=csv&gid=0" > data.csv
+          
+      - name: Commit changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add data.csv
+          git diff --staged --quiet || git commit -m "Auto-update data $(date)"
+          git push
