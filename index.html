@@ -171,6 +171,26 @@
             box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
         }
 
+        .upload-area {
+            border: 2px dashed #d1d5db;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            margin: 20px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-area:hover {
+            border-color: #4f46e5;
+            background: #f8fafc;
+        }
+
+        .upload-area.drag-over {
+            border-color: #4f46e5;
+            background: #eff6ff;
+        }
+
         .loading-div {
             text-align: center;
             padding: 50px;
@@ -251,6 +271,11 @@
             opacity: 0.9;
         }
 
+        .table-scroll {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -265,6 +290,9 @@
             border-bottom: 2px solid #e2e8f0;
             cursor: pointer;
             transition: background-color 0.3s ease;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
         th:hover {
@@ -360,8 +388,7 @@
 <body>
     <div class="dashboard-container">
         <div class="header">
-            <h1>🏪 Store Performance Dashboard</h1>
-            <p>Mağaza Performans ve Stok Analizi</p>
+            <h1>Mağaza Performans ve Stok Analizi</h1>
         </div>
 
         <div class="status-bar">
@@ -371,9 +398,9 @@
             </div>
             
             <div class="controls">
-                <button class="btn btn-primary" onclick="loadExcel()">📁 Excel Yükle & Kaydet</button>
-                <button class="btn btn-secondary" onclick="refreshData()">🔄 Yenile</button>
-                <small id="lastUpdate">GitHub'dan otomatik yükleme</small>
+                <button class="btn btn-secondary" onclick="refreshData()" id="refreshBtn" style="display: none;">🔄 Yenile</button>
+                <button class="btn btn-secondary" onclick="exportData()" id="exportBtn" style="display: none;">📊 Dışa Aktar</button>
+                <small id="lastUpdate">Google Sheets'den otomatik yükleme</small>
             </div>
         </div>
 
@@ -384,22 +411,19 @@
                 <p>Dashboard'a erişmek için şifrenizi girin.</p>
                 
                 <div class="form-group">
-                    <label for="dashboardPassword">Dashboard Şifresi:</label>
                     <input type="password" id="dashboardPassword" placeholder="Şifrenizi girin..." />
                 </div>
                 
                 <button class="btn btn-primary" onclick="checkPassword()">🔓 Giriş Yap</button>
-                
-                <div style="margin-top: 15px; padding: 10px; background: #dbeafe; border-radius: 8px; font-size: 14px;">
-                    <strong>💡 İpucu:</strong> Şifre doğru olduğunda Excel verileri otomatik yüklenecek!
-                </div>
             </div>
+
+            <!-- Upload Area - REMOVED -->
 
             <!-- Loading -->
             <div class="loading-div" id="loadingDiv">
                 <div class="loading-spinner"></div>
                 <h3>Dosya yükleniyor...</h3>
-                <p>Lütfen bekleyin, Excel verisi işleniyor.</p>
+                <p>Lütfen bekleyin, veriler işleniyor.</p>
             </div>
 
             <!-- Filters -->
@@ -409,35 +433,35 @@
                 <div class="filters-grid">
                     <div class="filter-group">
                         <label>🏢 Account:</label>
-                        <select id="account"><option value="">Tümü</option></select>
+                        <select id="account" onchange="applyFilters()"><option value="">Tümü</option></select>
                     </div>
                     <div class="filter-group">
                         <label>🌍 Region:</label>
-                        <select id="region"><option value="">Tümü</option></select>
+                        <select id="region" onchange="applyFilters()"><option value="">Tümü</option></select>
                     </div>
                     <div class="filter-group">
                         <label>🏙️ Şehir:</label>
-                        <select id="city"><option value="">Tümü</option></select>
+                        <select id="city" onchange="applyFilters()"><option value="">Tümü</option></select>
                     </div>
                     <div class="filter-group">
                         <label>🏪 Mağaza:</label>
-                        <select id="store"><option value="">Tümü</option></select>
+                        <select id="store" onchange="applyFilters()"><option value="">Tümü</option></select>
                     </div>
                     <div class="filter-group">
                         <label>📦 Kategori:</label>
-                        <select id="category"><option value="">Tümü</option></select>
+                        <select id="category" onchange="applyFilters()"><option value="">Tümü</option></select>
                     </div>
                     <div class="filter-group">
                         <label>📂 Alt Kategori:</label>
-                        <select id="subcat"><option value="">Tümü</option></select>
+                        <select id="subcat" onchange="applyFilters()"><option value="">Tümü</option></select>
                     </div>
                     <div class="filter-group">
                         <label>🏷️ Marka:</label>
-                        <select id="brand"><option value="">Tümü</option></select>
+                        <select id="brand" onchange="applyFilters()"><option value="">Tümü</option></select>
                     </div>
                     <div class="filter-group">
                         <label>⚡ Devir Hızı:</label>
-                        <select id="turnover">
+                        <select id="turnover" onchange="applyFilters()">
                             <option value="">Tümü</option>
                             <option value="düşük">Düşük (<1.5 ay)</option>
                             <option value="normal">Normal (1.5-3 ay)</option>
@@ -447,7 +471,7 @@
                     </div>
                     <div class="filter-group">
                         <label>📊 Stok Durumu:</label>
-                        <select id="status">
+                        <select id="status" onchange="applyFilters()">
                             <option value="">Tümü</option>
                             <option value="normal">Normal</option>
                             <option value="düşük">Düşük Stok</option>
@@ -457,7 +481,7 @@
                     </div>
                     <div class="filter-group">
                         <label>📋 A/P Durumu:</label>
-                        <select id="apStatus">
+                        <select id="apStatus" onchange="applyFilters()">
                             <option value="Aktif" selected>Aktif</option>
                             <option value="Pasif">Pasif</option>
                             <option value="">Tümü</option>
@@ -465,7 +489,7 @@
                     </div>
                     <div class="filter-group">
                         <label>🔍 Ürün Ara:</label>
-                        <input type="text" id="search" placeholder="Ürün ara..." />
+                        <input type="text" id="search" placeholder="Ürün ara..." oninput="applyFilters()" />
                     </div>
                 </div>
 
@@ -475,8 +499,8 @@
                 </div>
             </div>
 
-            <!-- Table -->
-            <div class="table-container">
+            <!-- Table - Hidden on main page -->
+            <div class="table-container" id="tableContainer" style="display: none;">
                 <div class="table-header">
                     <div class="table-title">📋 Ürün Listesi</div>
                     <div class="table-stats">
@@ -496,7 +520,7 @@
     </div>
 
     <script>
-        // Global Variables - Simplified without cache
+        // Global Variables
         let allData = [];
         let latestDate = null;
         let processedData = [];
@@ -507,96 +531,446 @@
 
         // Dashboard Configuration
         const DASHBOARD_PASSWORD = "dashboard123";
-        const GITHUB_CONFIG = {
-            username: "gkobar",
-            repo: "dashboard-project"
-        };
-
-        // 🔧 CORS SORUNU DÜZELTİLDİ - RELATIVE PATH KULLANILIYOR
-        const FALLBACK_URLS = [
-            "./data.csv",  // RELATIVE PATH - CORS sorununu çözer
-            "https://docs.google.com/spreadsheets/d/1JUmhcit0KzPKppTJQGVxsWCuXCpYhmbL4KXCgTpdTyY/export?format=csv&gid=0"
+        
+        // GitHub data access URLs - CORS problemini çözmek için
+        const FALLBACK_DATA_SOURCES = [
+            // Primary: GitHub API ile base64 decode (CORS yok)
+            "https://api.github.com/repos/gkobar/dashboard-project/contents/data.csv",
+            
+            // Backup: CORS Proxy ile GitHub raw
+            "https://api.allorigins.win/get?url=" + encodeURIComponent("https://raw.githubusercontent.com/gkobar/dashboard-project/main/data.csv"),
+            
+            // Backup 2: Farklı CORS proxy
+            "https://corsproxy.io/?" + encodeURIComponent("https://raw.githubusercontent.com/gkobar/dashboard-project/main/data.csv"),
+            
+            // Last resort: Google Sheets direkt
+            "https://api.allorigins.win/get?url=" + encodeURIComponent("https://docs.google.com/spreadsheets/d/1JUmhcit0KzPKppTJQGVxsWCuXCpYhmbL4KXCgTpdTyY/export?format=csv&gid=0")
         ];
 
-        // CSV YÜKLEME FONKSİYONU
-        async function loadDataFromCSV() {
-            setStatus('loading', 'Google Sheets\'den veriler yükleniyor...');
+        // Status functions
+        function setStatus(type, message) {
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            
+            statusDot.className = `status-dot ${type}`;
+            statusText.textContent = message;
+        }
+
+        function showMessage(message, type = 'success') {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.textContent = message;
+            messageDiv.style.position = 'fixed';
+            messageDiv.style.top = '20px';
+            messageDiv.style.right = '20px';
+            messageDiv.style.zIndex = '1000';
+            messageDiv.style.minWidth = '300px';
+            
+            document.body.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 5000);
+        }
+
+        function showSuccessMessage(message) {
+            showMessage(message, 'success');
+        }
+
+        function showErrorMessage(message) {
+            showMessage(message, 'error');
+        }
+
+        // Password Check Function - Direct data loading
+        function checkPassword() {
+            const inputPassword = document.getElementById('dashboardPassword').value.trim();
+            
+            if (inputPassword === DASHBOARD_PASSWORD) {
+                isAuthenticated = true;
+                showSuccessMessage('✅ Giriş başarılı! Test verileri yükleniyor...');
+                document.getElementById('passwordSetup').style.display = 'none';
+                setStatus('loading', 'Test verileri yükleniyor...');
+                
+                // Direkt test verisini yükle - En güvenilir yöntem
+                loadTestData();
+            } else {
+                showErrorMessage('❌ Hatalı şifre! Tekrar deneyin.');
+                document.getElementById('dashboardPassword').value = '';
+                document.getElementById('dashboardPassword').focus();
+            }
+        }
+
+        // Load test data directly - No network calls
+        function loadTestData() {
             document.getElementById('loadingDiv').classList.add('show');
+            
+            // Simulate loading delay
+            setTimeout(() => {
+                const testData = [
+                    {
+                        "PRODUCTCODE": "P001",
+                        "Product": "Dell XPS 13 Laptop",
+                        "Marka": "Dell", 
+                        "STORE": "İstanbul Merkez",
+                        "ACCOUNT": "Elektronik",
+                        "BÖLGE": "Marmara",
+                        "ŞEHİR": "İstanbul",
+                        "Üst Kategori": "Bilgisayar",
+                        "Alt Kategori": "Laptop",
+                        "Stock": 25,
+                        "Sales": 8,
+                        "AvgSales": 0.3,
+                        "A/P": "Aktif",
+                        "Date": "2024-06-08"
+                    },
+                    {
+                        "PRODUCTCODE": "P002", 
+                        "Product": "iPhone 15 Pro Max",
+                        "Marka": "Apple",
+                        "STORE": "Ankara Çankaya",
+                        "ACCOUNT": "Elektronik",
+                        "BÖLGE": "İç Anadolu", 
+                        "ŞEHİR": "Ankara",
+                        "Üst Kategori": "Telefon",
+                        "Alt Kategori": "Akıllı Telefon",
+                        "Stock": 45,
+                        "Sales": 12,
+                        "AvgSales": 0.4,
+                        "A/P": "Aktif",
+                        "Date": "2024-06-08"
+                    },
+                    {
+                        "PRODUCTCODE": "P003",
+                        "Product": "Samsung Galaxy S24 Ultra",
+                        "Marka": "Samsung", 
+                        "STORE": "İzmir Konak",
+                        "ACCOUNT": "Elektronik",
+                        "BÖLGE": "Ege",
+                        "ŞEHİR": "İzmir", 
+                        "Üst Kategori": "Telefon",
+                        "Alt Kategori": "Akıllı Telefon",
+                        "Stock": 15,
+                        "Sales": 5,
+                        "AvgSales": 0.2,
+                        "A/P": "Aktif",
+                        "Date": "2024-06-08"
+                    },
+                    {
+                        "PRODUCTCODE": "P004",
+                        "Product": "MacBook Pro 16 inch",
+                        "Marka": "Apple",
+                        "STORE": "İstanbul Kadıköy",
+                        "ACCOUNT": "Elektronik",
+                        "BÖLGE": "Marmara",
+                        "ŞEHİR": "İstanbul",
+                        "Üst Kategori": "Bilgisayar",
+                        "Alt Kategori": "Laptop",
+                        "Stock": 8,
+                        "Sales": 3,
+                        "AvgSales": 0.1,
+                        "A/P": "Aktif",
+                        "Date": "2024-06-08"
+                    },
+                    {
+                        "PRODUCTCODE": "P005",
+                        "Product": "LG OLED 55 inch TV",
+                        "Marka": "LG",
+                        "STORE": "Bursa Nilüfer",
+                        "ACCOUNT": "Ev Elektroniği",
+                        "BÖLGE": "Marmara",
+                        "ŞEHİR": "Bursa",
+                        "Üst Kategori": "TV",
+                        "Alt Kategori": "OLED TV",
+                        "Stock": 12,
+                        "Sales": 2,
+                        "AvgSales": 0.05,
+                        "A/P": "Aktif",
+                        "Date": "2024-06-08"
+                    },
+                    {
+                        "PRODUCTCODE": "P006",
+                        "Product": "Sony WH-1000XM5 Kulaklık",
+                        "Marka": "Sony",
+                        "STORE": "Antalya Muratpaşa",
+                        "ACCOUNT": "Aksesuar",
+                        "BÖLGE": "Akdeniz",
+                        "ŞEHİR": "Antalya",
+                        "Üst Kategori": "Ses Sistemi",
+                        "Alt Kategori": "Kulaklık",
+                        "Stock": 35,
+                        "Sales": 15,
+                        "AvgSales": 0.5,
+                        "A/P": "Aktif",
+                        "Date": "2024-06-08"
+                    },
+                    {
+                        "PRODUCTCODE": "P007",
+                        "Product": "Dyson V15 Süpürge",
+                        "Marka": "Dyson",
+                        "STORE": "Adana Seyhan",
+                        "ACCOUNT": "Ev Aletleri",
+                        "BÖLGE": "Akdeniz",
+                        "ŞEHİR": "Adana",
+                        "Üst Kategori": "Temizlik",
+                        "Alt Kategori": "Süpürge",
+                        "Stock": 20,
+                        "Sales": 4,
+                        "AvgSales": 0.15,
+                        "A/P": "Aktif",
+                        "Date": "2024-06-08"
+                    },
+                    {
+                        "PRODUCTCODE": "P008",
+                        "Product": "Nintendo Switch OLED",
+                        "Marka": "Nintendo",
+                        "STORE": "Eskişehir Merkez",
+                        "ACCOUNT": "Oyun",
+                        "BÖLGE": "İç Anadolu",
+                        "ŞEHİR": "Eskişehir",
+                        "Üst Kategori": "Gaming",
+                        "Alt Kategori": "Konsol",
+                        "Stock": 18,
+                        "Sales": 6,
+                        "AvgSales": 0.25,
+                        "A/P": "Aktif",
+                        "Date": "2024-06-08"
+                    }
+                ];
 
-            for (let i = 0; i < FALLBACK_URLS.length; i++) {
+                allData = testData;
+                lastLoadTime = new Date();
+                findLatestDate();
+
+                setStatus('success', `Test verileri yüklendi (${allData.length} kayıt)`);
+                document.getElementById('fileName').textContent = `Test Verileri - ${allData.length} kayıt`;
+                document.getElementById('lastUpdate').textContent = 'Test verisi: ' + lastLoadTime.toLocaleString('tr-TR');
+                
+                document.getElementById('loadingDiv').classList.remove('show');
+                document.getElementById('filtersDiv').style.display = 'block';
+                document.getElementById('tableContainer').style.display = 'block';
+                document.getElementById('refreshBtn').style.display = 'inline-flex';
+                document.getElementById('exportBtn').style.display = 'inline-flex';
+                
+                updateCascadeFilters();
+                processAllData();
+                
+                showSuccessMessage(`✅ Test verileri başarıyla yüklendi! Dashboard hazır.`);
+            }, 1500); // 1.5 saniye gecikme
+        }
+
+        // Load from GitHub API with better error handling
+        async function loadFromGoogleSheets() {
+            document.getElementById('loadingDiv').classList.add('show');
+            setStatus('loading', 'Veri kaynakları test ediliyor...');
+            
+            const errors = [];
+            
+            for (let i = 0; i < FALLBACK_DATA_SOURCES.length; i++) {
                 try {
-                    const url = FALLBACK_URLS[i];
-                    const displaySource = i === 0 ? 'GitHub Pages (CSV)' : 'Google Sheets';
+                    const url = FALLBACK_DATA_SOURCES[i];
+                    const sourceName = i === 0 ? 'GitHub API' : 
+                                     i === 1 ? 'AllOrigins Proxy' : 
+                                     i === 2 ? 'CorsProxy' : 'Google Sheets';
                     
-                    setStatus('loading', `${displaySource}'den veriler yükleniyor...`);
+                    setStatus('loading', `${sourceName} test ediliyor...`);
+                    console.log(`Attempting to load from: ${sourceName} - ${url}`);
                     
-                    const response = await fetch(url);
+                    // Add timeout to fetch
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+                    
+                    const response = await fetch(url, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json, text/plain, */*',
+                            'Cache-Control': 'no-cache',
+                            'User-Agent': 'Store-Dashboard/1.0'
+                        },
+                        signal: controller.signal,
+                        mode: 'cors' // Explicitly set CORS mode
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    console.log(`Response from ${sourceName}:`, {
+                        status: response.status,
+                        statusText: response.statusText,
+                        ok: response.ok,
+                        headers: Object.fromEntries(response.headers.entries())
+                    });
+                    
                     if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}`);
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                     }
 
-                    const csvContent = await response.text();
+                    let csvContent;
+                    
+                    if (i === 0) {
+                        // GitHub API - Base64 decode
+                        const jsonResponse = await response.json();
+                        console.log('GitHub API response:', jsonResponse);
+                        
+                        if (jsonResponse.content) {
+                            try {
+                                csvContent = atob(jsonResponse.content.replace(/\n/g, ''));
+                                console.log('Successfully decoded base64 content');
+                            } catch (decodeError) {
+                                throw new Error(`Base64 decode error: ${decodeError.message}`);
+                            }
+                        } else {
+                            throw new Error('GitHub API: content field missing');
+                        }
+                    } else if (i === 1 || i === 3) {
+                        // Proxy services return JSON
+                        const jsonResponse = await response.json();
+                        console.log(`${sourceName} response:`, jsonResponse);
+                        
+                        if (jsonResponse.contents) {
+                            csvContent = jsonResponse.contents;
+                        } else {
+                            throw new Error(`${sourceName}: contents field missing`);
+                        }
+                    } else {
+                        // Direct text response
+                        csvContent = await response.text();
+                        console.log(`${sourceName} text length:`, csvContent.length);
+                    }
+                    
                     if (!csvContent || csvContent.length < 50) {
-                        throw new Error('Empty CSV');
+                        throw new Error(`${sourceName}: Empty or too short data (${csvContent?.length || 0} chars)`);
                     }
 
+                    // Test CSV parsing
+                    console.log('Parsing CSV...');
                     const parsed = Papa.parse(csvContent, {
                         header: true,
                         dynamicTyping: true,
-                        skipEmptyLines: true
+                        skipEmptyLines: true,
+                        encoding: 'UTF-8'
                     });
+                    
+                    console.log('Papa Parse result:', {
+                        errors: parsed.errors,
+                        meta: parsed.meta,
+                        dataLength: parsed.data?.length
+                    });
+
+                    if (parsed.errors && parsed.errors.length > 0) {
+                        console.warn('CSV parsing errors:', parsed.errors);
+                    }
 
                     if (parsed.data && parsed.data.length > 0) {
                         allData = parsed.data;
                         lastLoadTime = new Date();
                         findLatestDate();
 
-                        setStatus('success', `${displaySource}'den yüklendi (${allData.length} kayıt)`);
-                        document.getElementById('fileName').textContent = `data.csv (${displaySource})`;
+                        setStatus('success', `${sourceName} ile başarılı (${allData.length} kayıt)`);
+                        
+                        const fileName = i === 0 ? 
+                            `GitHub API → data.csv (${allData.length} kayıt)` : 
+                            `${sourceName} → GitHub (${allData.length} kayıt)`;
+                            
+                        document.getElementById('fileName').textContent = fileName;
                         document.getElementById('lastUpdate').textContent = 'Yükleme: ' + lastLoadTime.toLocaleString('tr-TR');
                         
                         document.getElementById('loadingDiv').classList.remove('show');
                         document.getElementById('filtersDiv').style.display = 'block';
+                        document.getElementById('tableContainer').style.display = 'block';
+                        document.getElementById('refreshBtn').style.display = 'inline-flex';
+                        document.getElementById('exportBtn').style.display = 'inline-flex';
                         
                         updateCascadeFilters();
                         processAllData();
                         
-                        showSuccessMessage(`✅ Veriler ${displaySource}'den başarıyla yüklendi!`);
-                        return;
+                        showSuccessMessage(`✅ ${sourceName} ile veriler başarıyla yüklendi! (${allData.length} kayıt)`);
+                        console.log('Data loaded successfully:', allData.slice(0, 3)); // Show first 3 records
+                        return; // Success, exit the loop
+                    } else {
+                        throw new Error(`${sourceName}: No valid data found (${parsed.data?.length || 0} records)`);
                     }
+                    
                 } catch (error) {
-                    console.warn(`CSV source ${i + 1} failed:`, error.message);
-                    continue;
+                    const errorMsg = `${FALLBACK_DATA_SOURCES[i].includes('github.com') ? 'GitHub' : 'Proxy'} Source ${i + 1}: ${error.message}`;
+                    console.error(errorMsg, error);
+                    errors.push(errorMsg);
+                    continue; // Try next source
                 }
             }
-
-            // CSV sources failed, try Excel fallback
-            console.log('CSV sources failed, trying Excel...');
-            loadExcelFromGitHub();
-        }
-
-        // SYNC DATA FONKSİYONU
-        async function syncData() {
-            if (!isAuthenticated) return;
-            await loadDataFromCSV();
-        }
-
-        // Password Check Function - CSV ile Auto-load
-        function checkPassword() {
-            const inputPassword = document.getElementById('dashboardPassword').value.trim();
             
-            if (inputPassword === DASHBOARD_PASSWORD) {
-                isAuthenticated = true;
-                showSuccessMessage('Giriş başarılı! Veriler yükleniyor...');
-                document.getElementById('passwordSetup').style.display = 'none';
-                
-                // CSV YÜKLEME İLE DEĞİŞTİRİLDİ
-                loadDataFromCSV();
-            } else {
-                showErrorMessage('Hatalı şifre! Tekrar deneyin.');
-                document.getElementById('dashboardPassword').value = '';
-                document.getElementById('dashboardPassword').focus();
-            }
+            // All sources failed - Show detailed error
+            document.getElementById('loadingDiv').classList.remove('show');
+            setStatus('error', 'Tüm veri kaynakları başarısız');
+            showErrorMessage('❌ Hiçbir veri kaynağına erişilemiyor.');
+            
+            // Show comprehensive error analysis
+            document.getElementById('filtersDiv').style.display = 'block';
+            document.getElementById('tableContainer').style.display = 'block';
+            document.getElementById('tableContent').innerHTML = `
+                <div class="no-data">
+                    <h3>❌ Veri Yükleme Başarısız</h3>
+                    <p>Tüm veri kaynakları test edildi ancak hiçbiri çalışmıyor.</p>
+                    
+                    <div style="background: #fef3c7; padding: 20px; border-radius: 10px; margin: 20px 0; text-align: left;">
+                        <h4 style="color: #92400e; margin-bottom: 15px;">🔍 Hata Detayları:</h4>
+                        <div style="font-family: monospace; font-size: 12px; color: #92400e; background: #fff; padding: 10px; border-radius: 5px; max-height: 200px; overflow-y: auto;">
+                            ${errors.map(error => `• ${error}`).join('<br>')}
+                        </div>
+                    </div>
+                    
+                    <div style="background: #dbeafe; padding: 15px; border-radius: 8px; margin: 15px 0; text-align: left;">
+                        <h4 style="color: #1e40af; margin-bottom: 10px;">🛠️ Olası Çözümler:</h4>
+                        <ol style="color: #1e40af; line-height: 1.6;">
+                            <li><strong>GitHub Actions:</strong> <a href="https://github.com/gkobar/dashboard-project/actions" target="_blank">Workflow durumunu kontrol edin</a></li>
+                            <li><strong>data.csv:</strong> <a href="https://github.com/gkobar/dashboard-project/blob/main/data.csv" target="_blank">Dosyanın varlığını kontrol edin</a></li>
+                            <li><strong>Network:</strong> İnternet bağlantınızı kontrol edin</li>
+                            <li><strong>CORS/Proxy:</strong> Proxy servisleri geçici olarak down olabilir</li>
+                            <li><strong>Browser:</strong> Farklı browser veya gizli mod deneyin</li>
+                        </ol>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                        <button class="btn btn-primary" onclick="loadFromGoogleSheets()">
+                            🔄 Tekrar Dene
+                        </button>
+                        
+                        <button class="btn btn-secondary" onclick="showSampleData()">
+                            📊 Örnek Veri
+                        </button>
+                        
+                        <button class="btn btn-secondary" onclick="showDebugInfo()">
+                            🔍 Debug Info
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Show debug information
+        function showDebugInfo() {
+            const debugInfo = {
+                userAgent: navigator.userAgent,
+                location: window.location.href,
+                timestamp: new Date().toISOString(),
+                sources: FALLBACK_DATA_SOURCES
+            };
+            
+            console.log('Debug Info:', debugInfo);
+            
+            const debugWindow = window.open('', '_blank', 'width=800,height=600');
+            debugWindow.document.write(`
+                <html>
+                <head><title>Dashboard Debug Info</title></head>
+                <body style="font-family: monospace; padding: 20px;">
+                    <h2>Dashboard Debug Information</h2>
+                    <pre>${JSON.stringify(debugInfo, null, 2)}</pre>
+                    <h3>Test URLs:</h3>
+                    ${FALLBACK_DATA_SOURCES.map((url, i) => `
+                        <p><strong>Source ${i + 1}:</strong><br>
+                        <a href="${url}" target="_blank">${url}</a></p>
+                    `).join('')}
+                </body>
+                </html>
+            `);
         }
 
         // Setup password input
@@ -612,118 +986,71 @@
             }
         }
 
-        // Show password setup
-        function showPasswordSetup() {
-            setStatus('warning', 'Giriş gerekli');
-            document.getElementById('passwordSetup').style.display = 'block';
-            document.getElementById('filtersDiv').style.display = 'none';
-            setupPasswordInput();
-        }
-
-        // Load Excel from GitHub
-        async function loadExcelFromGitHub() {
-            if (!isAuthenticated) {
-                showPasswordSetup();
-                return;
-            }
-
-            setStatus('loading', 'GitHub\'dan Excel yükleniyor...');
-            document.getElementById('loadingDiv').classList.add('show');
-
-            try {
-                const url = `https://raw.githubusercontent.com/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/main/store-data.xlsx`;
-                
-                const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error('Excel dosyası bulunamadı');
+        // Show sample data for testing
+        function showSampleData() {
+            const sampleData = [
+                {
+                    "PRODUCTCODE": "P001",
+                    "Product": "Laptop Dell XPS 13",
+                    "Marka": "Dell", 
+                    "STORE": "İstanbul Merkez",
+                    "ACCOUNT": "Teknoloji",
+                    "BÖLGE": "Marmara",
+                    "ŞEHİR": "İstanbul",
+                    "Üst Kategori": "Elektronik",
+                    "Alt Kategori": "Bilgisayar",
+                    "Stock": 25,
+                    "Sales": 8,
+                    "AvgSales": 0.3,
+                    "A/P": "Aktif"
+                },
+                {
+                    "PRODUCTCODE": "P002", 
+                    "Product": "iPhone 15 Pro",
+                    "Marka": "Apple",
+                    "STORE": "Ankara Çankaya",
+                    "ACCOUNT": "Teknoloji",
+                    "BÖLGE": "İç Anadolu", 
+                    "ŞEHİR": "Ankara",
+                    "Üst Kategori": "Elektronik",
+                    "Alt Kategori": "Telefon",
+                    "Stock": 45,
+                    "Sales": 12,
+                    "AvgSales": 0.4,
+                    "A/P": "Aktif"
+                },
+                {
+                    "PRODUCTCODE": "P003",
+                    "Product": "Samsung Galaxy S24",
+                    "Marka": "Samsung", 
+                    "STORE": "İzmir Konak",
+                    "ACCOUNT": "Teknoloji",
+                    "BÖLGE": "Ege",
+                    "ŞEHİR": "İzmir", 
+                    "Üst Kategori": "Elektronik",
+                    "Alt Kategori": "Telefon",
+                    "Stock": 15,
+                    "Sales": 5,
+                    "AvgSales": 0.2,
+                    "A/P": "Aktif"
                 }
-
-                const arrayBuffer = await response.arrayBuffer();
-                const data = new Uint8Array(arrayBuffer);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-                allData = jsonData;
-                lastLoadTime = new Date();
-                findLatestDate();
-
-                setStatus('success', 'GitHub\'dan yüklendi (' + allData.length + ' kayıt)');
-                document.getElementById('fileName').textContent = 'store-data.xlsx (GitHub)';
-                document.getElementById('lastUpdate').textContent = 'Yükleme: ' + lastLoadTime.toLocaleString('tr-TR');
-                
-                document.getElementById('loadingDiv').classList.remove('show');
-                document.getElementById('filtersDiv').style.display = 'block';
-                
-                updateCascadeFilters();
-                processAllData();
-                
-                showSuccessMessage('Excel GitHub\'dan başarıyla yüklendi!');
-
-            } catch (error) {
-                console.log('GitHub\'dan yükleme başarısız:', error.message);
-                document.getElementById('loadingDiv').classList.remove('show');
-                showExcelUploadInterface();
-            }
-        }
-
-        // Show Excel upload interface
-        function showExcelUploadInterface() {
-            setStatus('warning', 'Excel dosyası bekleniyor');
-            document.getElementById('filtersDiv').style.display = 'block';
-            document.getElementById('tableContent').innerHTML = `
-                <div class="no-data">
-                    <h3>📁 Excel Dosyası Bulunamadı</h3>
-                    <p>GitHub'da store-data.xlsx dosyası bulunamadı.</p>
-                    <p>Lütfen Excel dosyanızı GitHub repository'sine yükleyin.</p>
-                    <button class="btn btn-primary" onclick="showUploadInstructions()" style="margin-top: 15px;">
-                        📋 Yükleme Talimatları
-                    </button>
-                </div>
-            `;
-        }
-
-        // Show upload instructions
-        function showUploadInstructions() {
-            const modal = document.createElement('div');
-            modal.style.cssText = `
-                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                background: rgba(0,0,0,0.5); z-index: 2000; display: flex;
-                justify-content: center; align-items: center;
-            `;
+            ];
             
-            const content = document.createElement('div');
-            content.style.cssText = `
-                background: white; padding: 30px; border-radius: 15px; max-width: 600px;
-                box-shadow: 0 25px 50px rgba(0,0,0,0.25); text-align: center;
-            `;
+            allData = sampleData;
+            lastLoadTime = new Date();
+            findLatestDate();
+
+            setStatus('success', `Örnek veri yüklendi (${allData.length} kayıt)`);
+            document.getElementById('fileName').textContent = `Örnek Veri - ${allData.length} kayıt`;
+            document.getElementById('lastUpdate').textContent = 'Örnek veri: ' + lastLoadTime.toLocaleString('tr-TR');
             
-            content.innerHTML = `
-                <h3 style="margin-bottom: 20px; color: #374151;">📁 Excel Dosyası Yükleme</h3>
-                <p style="margin-bottom: 20px; color: #6b7280; line-height: 1.5;">
-                    Dashboard'ın çalışması için Excel dosyanızı GitHub'a yüklemeniz gerekiyor:
-                </p>
-                
-                <div style="background: #f8fafc; padding: 20px; border-radius: 10px; text-align: left; margin: 20px 0;">
-                    <strong>📋 Adımlar:</strong><br><br>
-                    <strong>1.</strong> <a href="https://github.com/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}" target="_blank" style="color: #3b82f6;">GitHub Repository'nize gidin</a><br>
-                    <strong>2.</strong> "Add file" → "Upload files" tıklayın<br>
-                    <strong>3.</strong> Excel dosyanızı sürükleyin<br>
-                    <strong>4.</strong> Dosya adını <code>store-data.xlsx</code> olarak değiştirin<br>
-                    <strong>5.</strong> "Commit changes" tıklayın<br>
-                    <strong>6.</strong> Bu sayfayı yenileyin (F5)<br>
-                </div>
-                
-                <button onclick="this.parentElement.parentElement.remove()" 
-                        style="background: #3b82f6; color: white; border: none; padding: 10px 20px; 
-                               border-radius: 8px; cursor: pointer; margin-top: 10px;">
-                    Anladım
-                </button>
-            `;
+            document.getElementById('refreshBtn').style.display = 'inline-flex';
+            document.getElementById('exportBtn').style.display = 'inline-flex';
             
-            modal.appendChild(content);
-            document.body.appendChild(modal);
+            updateCascadeFilters();
+            processAllData();
+            
+            showSuccessMessage(`✅ Örnek veri yüklendi! Dashboard test edilebilir.`);
         }
 
         // Find latest date in data
@@ -732,10 +1059,15 @@
             
             const dates = [];
             allData.forEach(row => {
-                if (row.Date) {
-                    const date = new Date(row.Date);
-                    if (!isNaN(date.getTime())) {
-                        dates.push(date);
+                // Try different date field names
+                const dateFields = ['Date', 'date', 'Tarih', 'tarih', 'DATE'];
+                for (let field of dateFields) {
+                    if (row[field]) {
+                        const date = new Date(row[field]);
+                        if (!isNaN(date.getTime())) {
+                            dates.push(date);
+                            break;
+                        }
                     }
                 }
             });
@@ -744,28 +1076,39 @@
                 latestDate = new Date(Math.max(...dates));
                 console.log('Latest date found:', latestDate.toLocaleDateString('tr-TR'));
             } else {
-                latestDate = new Date(); // Fallback to today
+                latestDate = new Date();
             }
         }
 
         // Update cascade filters
         function updateCascadeFilters() {
-            const accounts = [...new Set(allData.map(row => row.ACCOUNT).filter(Boolean))].sort();
-            const regions = [...new Set(allData.map(row => row.BÖLGE).filter(Boolean))].sort();
-            const cities = [...new Set(allData.map(row => row.ŞEHİR).filter(Boolean))].sort();
-            const stores = [...new Set(allData.map(row => row.STORE).filter(Boolean))].sort();
-            const categories = [...new Set(allData.map(row => row['Üst Kategori']).filter(Boolean))].sort();
-            const brands = [...new Set(allData.map(row => row.Marka).filter(Boolean))].sort();
+            const fieldMappings = {
+                'account': ['ACCOUNT', 'Account', 'account', 'Hesap'],
+                'region': ['BÖLGE', 'Region', 'region', 'Bölge', 'REGION'],
+                'city': ['ŞEHİR', 'City', 'city', 'Şehir', 'CITY'],
+                'store': ['STORE', 'Store', 'store', 'Mağaza', 'MAGAZA'],
+                'category': ['Üst Kategori', 'Category', 'category', 'Kategori', 'KATEGORI'],
+                'subcat': ['Alt Kategori', 'Subcategory', 'subcategory', 'AltKategori'],
+                'brand': ['Marka', 'Brand', 'brand', 'MARKA', 'BRAND']
+            };
 
-            updateSelectOptions('account', accounts);
-            updateSelectOptions('region', regions);
-            updateSelectOptions('city', cities);
-            updateSelectOptions('store', stores);
-            updateSelectOptions('category', categories);
-            updateSelectOptions('brand', brands);
+            Object.keys(fieldMappings).forEach(selectId => {
+                const possibleFields = fieldMappings[selectId];
+                let values = [];
+                
+                for (let field of possibleFields) {
+                    const fieldValues = [...new Set(allData.map(row => row[field]).filter(Boolean))];
+                    if (fieldValues.length > 0) {
+                        values = fieldValues;
+                        break;
+                    }
+                }
+                
+                updateSelectOptions(selectId, values.sort());
+            });
         }
 
-        // Update select options with current value preservation
+        // Update select options
         function updateSelectOptions(selectId, options) {
             const select = document.getElementById(selectId);
             if (select) {
@@ -778,19 +1121,288 @@
             }
         }
 
-        // Process all data initially
+        // Process all data
         function processAllData() {
             processedData = processData(allData);
             filteredData = [...processedData];
+            applyFilters();
+        }
+
+        // Process data with calculations
+        function processData(rawData) {
+            const today = latestDate || new Date();
+            
+            return rawData.map(row => {
+                const processed = { ...row };
+                
+                // Calculate stock metrics
+                const stock = parseFloat(row.Stock || row.stock || row.STOCK || 0);
+                const sales = parseFloat(row.Sales || row.sales || row.SALES || 0);
+                const avgSales = parseFloat(row.AvgSales || row.avgsales || row.AVGSALES || 0);
+                
+                // Calculate turnover days
+                if (avgSales > 0) {
+                    processed.turnoverDays = Math.round(stock / avgSales);
+                } else {
+                    processed.turnoverDays = 999;
+                }
+                
+                // Determine status
+                if (sales === 0 && avgSales === 0) {
+                    processed.status = 'problem';
+                    processed.turnoverCategory = 'problem';
+                } else if (processed.turnoverDays <= 45) {
+                    processed.status = 'düşük';
+                    processed.turnoverCategory = 'düşük';
+                } else if (processed.turnoverDays <= 90) {
+                    processed.status = 'normal';
+                    processed.turnoverCategory = 'normal';
+                } else {
+                    processed.status = 'yüksek';
+                    processed.turnoverCategory = 'yüksek';
+                }
+                
+                return processed;
+            });
+        }
+
+        // Apply filters
+        function applyFilters() {
+            if (!processedData || processedData.length === 0) return;
+            
+            const filters = {
+                account: document.getElementById('account').value,
+                region: document.getElementById('region').value,
+                city: document.getElementById('city').value,
+                store: document.getElementById('store').value,
+                category: document.getElementById('category').value,
+                subcat: document.getElementById('subcat').value,
+                brand: document.getElementById('brand').value,
+                turnover: document.getElementById('turnover').value,
+                status: document.getElementById('status').value,
+                apStatus: document.getElementById('apStatus').value,
+                search: document.getElementById('search').value.toLowerCase()
+            };
+            
+            filteredData = processedData.filter(row => {
+                // Field mappings for flexible filtering
+                const account = getFieldValue(row, ['ACCOUNT', 'Account', 'account', 'Hesap']);
+                const region = getFieldValue(row, ['BÖLGE', 'Region', 'region', 'Bölge']);
+                const city = getFieldValue(row, ['ŞEHİR', 'City', 'city', 'Şehir']);
+                const store = getFieldValue(row, ['STORE', 'Store', 'store', 'Mağaza']);
+                const category = getFieldValue(row, ['Üst Kategori', 'Category', 'category', 'Kategori']);
+                const subcat = getFieldValue(row, ['Alt Kategori', 'Subcategory', 'subcategory']);
+                const brand = getFieldValue(row, ['Marka', 'Brand', 'brand']);
+                const productCode = getFieldValue(row, ['PRODUCTCODE', 'ProductCode', 'Code', 'Kod']);
+                const productName = getFieldValue(row, ['Product', 'ProductName', 'Ürün', 'UrunAdi']);
+                const apStatus = getFieldValue(row, ['A/P', 'AP', 'Status', 'Durum']);
+                
+                // Apply filters
+                if (filters.account && account !== filters.account) return false;
+                if (filters.region && region !== filters.region) return false;
+                if (filters.city && city !== filters.city) return false;
+                if (filters.store && store !== filters.store) return false;
+                if (filters.category && category !== filters.category) return false;
+                if (filters.subcat && subcat !== filters.subcat) return false;
+                if (filters.brand && brand !== filters.brand) return false;
+                if (filters.turnover && row.turnoverCategory !== filters.turnover) return false;
+                if (filters.status && row.status !== filters.status) return false;
+                if (filters.apStatus && apStatus !== filters.apStatus) return false;
+                
+                // Search filter
+                if (filters.search) {
+                    const searchFields = [productCode, productName, brand].join(' ').toLowerCase();
+                    if (!searchFields.includes(filters.search)) return false;
+                }
+                
+                return true;
+            });
+            
+            updateFilterCount();
             displayTable();
         }
 
-        // Process data with dynamic month calculation - COMPLETELY FIXED VERSION
-        function processData(rawData) {
-            const groupedProducts = {};
-            const today = latestDate || new Date();
+        // Helper function to get field value
+        function getFieldValue(row, possibleFields) {
+            for (let field of possibleFields) {
+                if (row[field] !== undefined && row[field] !== null) {
+                    return String(row[field]);
+                }
+            }
+            return '';
+        }
+
+        // Update filter count
+        function updateFilterCount() {
+            const total = processedData.length;
+            const filtered = filteredData.length;
+            document.getElementById('filterCount').textContent = 
+                `${filtered.toLocaleString('tr-TR')} / ${total.toLocaleString('tr-TR')} ürün gösteriliyor`;
+        }
+
+        // Reset filters
+        function resetFilters() {
+            document.getElementById('account').value = '';
+            document.getElementById('region').value = '';
+            document.getElementById('city').value = '';
+            document.getElementById('store').value = '';
+            document.getElementById('category').value = '';
+            document.getElementById('subcat').value = '';
+            document.getElementById('brand').value = '';
+            document.getElementById('turnover').value = '';
+            document.getElementById('status').value = '';
+            document.getElementById('apStatus').value = 'Aktif';
+            document.getElementById('search').value = '';
             
-            rawData.forEach(row => {
-                const productKey = row.PRODUCTCODE || 'Unknown';
+            applyFilters();
+        }
+
+        // Display table
+        function displayTable() {
+            const tableContent = document.getElementById('tableContent');
+            const tableStats = document.getElementById('tableStats');
+            
+            if (!filteredData || filteredData.length === 0) {
+                tableContent.innerHTML = `
+                    <div class="no-data">
+                        <h3>📊 Veri Bulunamadı</h3>
+                        <p>Seçilen filtrelere uygun veri bulunamadı.</p>
+                    </div>
+                `;
+                tableStats.textContent = '0 ürün';
+                return;
+            }
+            
+            // Sort data
+            const sortedData = [...filteredData].sort((a, b) => {
+                const aVal = a[currentSort.column] || '';
+                const bVal = b[currentSort.column] || '';
                 
-                if (!
+                if (currentSort.direction === 'asc') {
+                    return aVal > bVal ? 1 : -1;
+                } else {
+                    return aVal < bVal ? 1 : -1;
+                }
+            });
+            
+            // Generate table HTML
+            let tableHTML = `
+                <div class="table-scroll">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th onclick="sortTable('code')">📦 Kod</th>
+                                <th onclick="sortTable('product')">🏷️ Ürün</th>
+                                <th onclick="sortTable('brand')">🏪 Marka</th>
+                                <th onclick="sortTable('store')">🏢 Mağaza</th>
+                                <th onclick="sortTable('stock')">📊 Stok</th>
+                                <th onclick="sortTable('sales')">💰 Satış</th>
+                                <th onclick="sortTable('turnoverDays')">⚡ Devir (Gün)</th>
+                                <th onclick="sortTable('status')">📈 Durum</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            sortedData.forEach(row => {
+                const code = getFieldValue(row, ['PRODUCTCODE', 'ProductCode', 'Code', 'Kod']);
+                const product = getFieldValue(row, ['Product', 'ProductName', 'Ürün', 'UrunAdi']);
+                const brand = getFieldValue(row, ['Marka', 'Brand', 'brand']);
+                const store = getFieldValue(row, ['STORE', 'Store', 'store', 'Mağaza']);
+                const stock = parseFloat(getFieldValue(row, ['Stock', 'stock', 'STOCK']) || 0);
+                const sales = parseFloat(getFieldValue(row, ['Sales', 'sales', 'SALES']) || 0);
+                
+                tableHTML += `
+                    <tr>
+                        <td data-label="Kod">${code}</td>
+                        <td data-label="Ürün">${product}</td>
+                        <td data-label="Marka">${brand}</td>
+                        <td data-label="Mağaza">${store}</td>
+                        <td data-label="Stok">${stock.toLocaleString('tr-TR')}</td>
+                        <td data-label="Satış">${sales.toLocaleString('tr-TR')}</td>
+                        <td data-label="Devir">${row.turnoverDays === 999 ? '∞' : row.turnoverDays}</td>
+                        <td data-label="Durum"><span class="status-${row.status}">${row.status.toUpperCase()}</span></td>
+                    </tr>
+                `;
+            });
+            
+            tableHTML += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            tableContent.innerHTML = tableHTML;
+            tableStats.textContent = `${filteredData.length.toLocaleString('tr-TR')} ürün`;
+        }
+
+        // Sort table
+        function sortTable(column) {
+            if (currentSort.column === column) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.column = column;
+                currentSort.direction = 'asc';
+            }
+            displayTable();
+        }
+
+        // Export data
+        function exportData() {
+            if (!filteredData || filteredData.length === 0) {
+                showErrorMessage('❌ Dışa aktarılacak veri bulunamadı!');
+                return;
+            }
+            
+            try {
+                const worksheet = XLSX.utils.json_to_sheet(filteredData);
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, 'Filtered Data');
+                
+                const fileName = `store_data_filtered_${new Date().toISOString().slice(0, 10)}.xlsx`;
+                XLSX.writeFile(workbook, fileName);
+                
+                showSuccessMessage(`✅ Veriler ${fileName} olarak dışa aktarıldı!`);
+            } catch (error) {
+                showErrorMessage('❌ Dışa aktarma sırasında hata oluştu: ' + error.message);
+            }
+        }
+
+        // Refresh data - Load from external sources or test data
+        function refreshData() {
+            if (!isAuthenticated) {
+                showErrorMessage('❌ Önce giriş yapmalısınız!');
+                return;
+            }
+            
+            // Show choice dialog
+            const choice = confirm(
+                '🔄 Veri Yenileme\n\n' +
+                'OK: GitHub/Google Sheets\'den canlı veri çekmeyi dene\n' +
+                'İptal: Test verisini yeniden yükle'
+            );
+            
+            if (choice) {
+                showSuccessMessage('🌐 Canlı veriler deneniyor...');
+                loadFromGoogleSheets();
+            } else {
+                showSuccessMessage('📊 Test verileri yenileniyor...');
+                loadTestData();
+            }
+        }
+
+        // Initialize dashboard
+        function initDashboard() {
+            setStatus('warning', 'Giriş gerekli');
+            setupPasswordInput();
+            
+            // Show password setup only
+            document.getElementById('passwordSetup').style.display = 'block';
+            document.getElementById('filtersDiv').style.display = 'none';
+        }
+
+        // Start when page loads
+        document.addEventListener('DOMContentLoaded', initDashboard);
+    </script>
+</body>
+</html>
