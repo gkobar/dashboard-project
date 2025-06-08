@@ -1,4 +1,4 @@
-name: Google Sheets to JS API
+name: Google Sheets to JS API - Fixed
 
 on:
   schedule:
@@ -22,36 +22,110 @@ jobs:
       run: |
         mkdir -p api
         
+        echo "📊 Downloading from Google Sheets..."
         curl -L "https://docs.google.com/spreadsheets/d/1JUmhcit0KzPKppTJQGVxsWCuXCpYhmbL4KXCgTpdTyY/export?format=csv&gid=0" -o raw_data.csv
         
+        echo "📏 Raw file size:"
+        wc -l raw_data.csv
+        head -5 raw_data.csv
+        
+        echo "✂️ Taking first 1000 rows..."
         head -n 1001 raw_data.csv > data.csv
         
+        echo "📊 Processing CSV..."
         node -e "
         const fs = require('fs');
-        const csvContent = fs.readFileSync('data.csv', 'utf8');
-        const lines = csvContent.trim().split('\n');
-        const headers = lines[0].split(',').map(h => h.replace(/\\\"/g, ''));
-        const data = [];
         
-        for (let i = 1; i < lines.length; i++) {
-          const values = lines[i].split(',').map(v => v.replace(/\\\"/g, ''));
-          const record = {};
-          headers.forEach((header, index) => {
-            const value = values[index] || '';
-            if (value && !isNaN(value) && !isNaN(parseFloat(value))) {
-              record[header] = parseFloat(value);
+        try {
+          const csvContent = fs.readFileSync('data.csv', 'utf8').trim();
+          console.log('CSV length:', csvContent.length);
+          console.log('First 200 chars:', csvContent.substring(0, 200));
+          
+          const lines = csvContent.split('\n').filter(line => line.trim());
+          console.log('Total lines:', lines.length);
+          
+          if (lines.length < 2) {
+            throw new Error('Not enough lines in CSV');
+          }
+          
+          // Parse headers - handle quoted fields properly
+          const headerLine = lines[0];
+          const headers = [];
+          let currentField = '';
+          let inQuotes = false;
+          
+          for (let i = 0; i < headerLine.length; i++) {
+            const char = headerLine[i];
+            if (char === '\"') {
+              inQuotes = !inQuotes;
+            } else if (char === ',' && !inQuotes) {
+              headers.push(currentField.trim().replace(/^\"|\"$/g, ''));
+              currentField = '';
             } else {
-              record[header] = value;
+              currentField += char;
             }
-          });
-          data.push(record);
+          }
+          // Add last field
+          headers.push(currentField.trim().replace(/^\"|\"$/g, ''));
+          
+          console.log('Headers:', headers);
+          
+          const data = [];
+          
+          // Parse data rows
+          for (let i = 1; i < Math.min(lines.length, 1001); i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+            
+            const values = [];
+            let currentValue = '';
+            let inQuotes = false;
+            
+            for (let j = 0; j < line.length; j++) {
+              const char = line[j];
+              if (char === '\"') {
+                inQuotes = !inQuotes;
+              } else if (char === ',' && !inQuotes) {
+                values.push(currentValue.trim().replace(/^\"|\"$/g, ''));
+                currentValue = '';
+              } else {
+                currentValue += char;
+              }
+            }
+            // Add last value
+            values.push(currentValue.trim().replace(/^\"|\"$/g, ''));
+            
+            const record = {};
+            headers.forEach((header, index) => {
+              const value = values[index] || '';
+              
+              // Try to convert numbers
+              if (value && !isNaN(value) && !isNaN(parseFloat(value)) && isFinite(value)) {
+                record[header] = parseFloat(value);
+              } else {
+                record[header] = value;
+              }
+            });
+            
+            data.push(record);
+          }
+          
+          console.log('Parsed records:', data.length);
+          if (data.length > 0) {
+            console.log('Sample record:', JSON.stringify(data[0], null, 2));
+          }
+          
+          const now = new Date().toISOString();
+          const jsContent = '// Store API Data - Auto-generated\\n// Last updated: ' + now + '\\n\\nwindow.STORE_DATA = {\\n  lastUpdate: \\\"' + now + '\\\",\\n  recordCount: ' + data.length + ',\\n  data: ' + JSON.stringify(data, null, 2) + '\\n};';
+          
+          fs.writeFileSync('api/data.js', jsContent);
+          console.log('✅ Created JS API with', data.length, 'records');
+          
+        } catch (error) {
+          console.error('❌ Error:', error.message);
+          console.error('Stack:', error.stack);
+          process.exit(1);
         }
-        
-        const now = new Date().toISOString();
-        const jsContent = '// Store API Data - Auto-generated\\n// Last updated: ' + now + '\\n\\nwindow.STORE_DATA = {\\n  lastUpdate: \\\"' + now + '\\\",\\n  recordCount: ' + data.length + ',\\n  data: ' + JSON.stringify(data, null, 2) + '\\n};';
-        
-        fs.writeFileSync('api/data.js', jsContent);
-        console.log('Created JS API with', data.length, 'records');
         "
 
     - name: Commit and push changes
@@ -62,4 +136,7 @@ jobs:
         if ! git diff --quiet --cached; then
           git commit -m "Auto-update data and JS API $(date)"
           git push
+          echo "✅ Changes committed and pushed"
+        else
+          echo "📊 No changes to commit"
         fi
