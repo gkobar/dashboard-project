@@ -3,188 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Store Performance Dashboard</title>
+    <title>Store Dashboard</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #667eea;
+            padding: 10px;
         }
 
-        .dashboard-container {
-            max-width: 1400px;
+        .container {
+            max-width: 1200px;
             margin: 0 auto;
             background: white;
-            border-radius: 20px;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+            border-radius: 10px;
             overflow: hidden;
         }
 
         .header {
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            background: #4f46e5;
             color: white;
-            padding: 30px;
+            padding: 20px;
             text-align: center;
-            position: relative;
         }
 
-        .header h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 10px;
-        }
-
-        .header p {
-            font-size: 1.1rem;
-            opacity: 0.9;
-        }
-
-        .status-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 30px;
+        .status {
+            padding: 15px;
             background: #f8fafc;
             border-bottom: 1px solid #e2e8f0;
-        }
-
-        .status-indicator {
             display: flex;
-            align-items: center;
-            gap: 10px;
-            font-weight: 600;
-        }
-
-        .status-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #10b981;
-        }
-
-        .status-dot.loading { background: #f59e0b; animation: pulse 2s infinite; }
-        .status-dot.error { background: #ef4444; }
-        .status-dot.warning { background: #f59e0b; }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .controls {
-            display: flex;
-            gap: 15px;
+            justify-content: space-between;
             align-items: center;
         }
 
         .btn {
-            padding: 10px 20px;
+            padding: 8px 16px;
             border: none;
-            border-radius: 8px;
-            font-weight: 600;
+            border-radius: 5px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
+            font-weight: 600;
         }
 
-        .btn-primary {
-            background: #4f46e5;
-            color: white;
-        }
+        .btn-primary { background: #4f46e5; color: white; }
+        .btn-secondary { background: #6b7280; color: white; }
 
-        .btn-primary:hover {
-            background: #4338ca;
-            transform: translateY(-2px);
-        }
+        .content { padding: 20px; }
 
-        .btn-secondary {
-            background: #6b7280;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background: #4b5563;
-        }
-
-        .content {
-            padding: 30px;
-        }
-
-        .password-setup {
-            max-width: 500px;
+        .password-box {
+            max-width: 400px;
             margin: 50px auto;
-            padding: 40px;
+            padding: 30px;
             background: #f8fafc;
-            border-radius: 15px;
+            border-radius: 10px;
             text-align: center;
-            border: 2px solid #e2e8f0;
-        }
-
-        .password-setup h3 {
-            color: #1f2937;
-            margin-bottom: 20px;
-            font-size: 1.5rem;
-        }
-
-        .password-setup p {
-            color: #6b7280;
-            margin-bottom: 30px;
-            line-height: 1.6;
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin: 15px 0;
             text-align: left;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 5px;
             font-weight: 600;
             color: #374151;
         }
 
         .form-group input {
             width: 100%;
-            padding: 12px 16px;
-            border: 2px solid #d1d5db;
-            border-radius: 8px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
             font-size: 16px;
-            transition: border-color 0.3s ease;
         }
 
-        .form-group input:focus {
-            outline: none;
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-        }
-
-        .loading-div {
+        .loading {
             text-align: center;
             padding: 50px;
             display: none;
         }
 
-        .loading-div.show {
-            display: block;
-        }
+        .loading.show { display: block; }
 
-        .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 4px solid #e2e8f0;
-            border-top: 4px solid #4f46e5;
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4f46e5;
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin: 0 auto 20px;
@@ -195,13 +103,15 @@
             100% { transform: rotate(360deg); }
         }
 
-        .filters-container {
+        .filters {
             background: #f8fafc;
-            padding: 25px;
-            border-radius: 12px;
-            margin-bottom: 25px;
-            border: 1px solid #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
         }
+
+        .filters.show { display: block; }
 
         .filters-grid {
             display: grid;
@@ -218,36 +128,18 @@
             font-size: 14px;
         }
 
-        .filter-actions {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-        }
-
-        .table-container {
+        .table-box {
             background: white;
-            border-radius: 12px;
+            border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
         }
 
         .table-header {
             background: #4f46e5;
             color: white;
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .table-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-        }
-
-        .table-stats {
-            font-size: 0.9rem;
-            opacity: 0.9;
+            padding: 15px;
+            text-align: center;
         }
 
         table {
@@ -255,139 +147,96 @@
             border-collapse: collapse;
         }
 
-        th {
-            background: #f8fafc;
-            padding: 15px 12px;
+        th, td {
+            padding: 10px;
             text-align: left;
-            font-weight: 600;
-            color: #374151;
-            border-bottom: 2px solid #e2e8f0;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-
-        th:hover {
-            background: #f1f5f9;
-        }
-
-        td {
-            padding: 12px;
             border-bottom: 1px solid #f1f5f9;
             font-size: 14px;
         }
 
-        tr:hover {
+        th {
             background: #f8fafc;
-        }
-
-        .status-normal { background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
-        .status-düşük { background: #fecaca; color: #991b1b; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
-        .status-yüksek { background: #fed7aa; color: #9a3412; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
-        .status-problem { background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
-
-        .no-data {
-            text-align: center;
-            padding: 60px 20px;
-            color: #6b7280;
-        }
-
-        .no-data h3 {
-            font-size: 1.5rem;
-            margin-bottom: 10px;
-            color: #374151;
-        }
-
-        .message {
-            padding: 15px 20px;
-            border-radius: 8px;
-            margin: 20px 0;
             font-weight: 600;
         }
 
-        .message.success {
-            background: #dcfce7;
-            color: #166534;
-            border: 1px solid #bbf7d0;
+        tr:hover { background: #f8fafc; }
+
+        .no-data {
+            text-align: center;
+            padding: 50px;
+            color: #6b7280;
         }
 
-        .message.error {
-            background: #fecaca;
-            color: #991b1b;
-            border: 1px solid #fca5a5;
-        }
-
-        .message.warning {
-            background: #fef3c7;
-            color: #92400e;
-            border: 1px solid #fde68a;
-        }
-
-        @media (max-width: 768px) {
-            .header h1 { font-size: 2rem; }
-            .status-bar { flex-direction: column; gap: 15px; }
-            .filters-grid { grid-template-columns: 1fr; }
-            .controls { flex-wrap: wrap; }
+            /* Mobile */
+            @media (max-width: 768px) {
+                .filters-grid { grid-template-columns: 1fr; }
             
-            table, thead, tbody, th, td, tr {
-                display: block;
-            }
-            
+            table, thead, tbody, th, td, tr { display: block; }
             th { display: none; }
             
             tr {
                 border: 1px solid #e2e8f0;
                 margin-bottom: 10px;
-                border-radius: 8px;
                 padding: 10px;
+                border-radius: 5px;
             }
             
             td {
                 border: none;
                 padding: 5px 0;
-                text-align: left;
             }
             
             td:before {
                 content: attr(data-label) ": ";
                 font-weight: bold;
                 display: inline-block;
-                width: 120px;
+                width: 100px;
             }
+        }
+
+        .progress {
+            background: #e2e8f0;
+            border-radius: 10px;
+            height: 20px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            background: #4f46e5;
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
         }
     </style>
 </head>
 <body>
-    <div class="dashboard-container">
+    <div class="container">
         <div class="header">
-            <h1>🏪 Store Performance Dashboard</h1>
-            <p>Mağaza Performans ve Stok Analizi</p>
+            <h1>🏪 Store Dashboard</h1>
+            <p>Basit ve Hızlı Analiz</p>
         </div>
 
-        <div class="status-bar">
-            <div class="status-indicator">
-                <div class="status-dot" id="statusDot"></div>
-                <span id="statusText">Sistem hazır</span>
-            </div>
-            
-            <div class="controls">
-                <button class="btn btn-primary" onclick="loadExcel()">📁 Excel Yükle & Kaydet</button>
-                <button class="btn btn-secondary" onclick="refreshData()">🔄 Yenile</button>
-                <small id="lastUpdate">GitHub'dan otomatik yükleme</small>
+        <div class="status">
+            <span id="statusText">Sistem hazır</span>
+            <div>
+                <button class="btn btn-primary" onclick="loadFile()">📁 Excel Yükle</button>
+                <button class="btn btn-secondary" onclick="loadFromGitHub()">🔄 GitHub'dan Yükle</button>
             </div>
         </div>
 
         <div class="content">
-            <!-- Password Setup -->
-            <div class="password-setup" id="passwordSetup">
+            <!-- Password -->
+            <div class="password-box" id="passwordBox">
                 <h3>🔐 Dashboard Girişi</h3>
-                <p>Dashboard'a erişmek için şifrenizi girin.</p>
+                <p style="margin-bottom: 20px;">Dashboard'a erişmek için şifrenizi girin.</p>
                 
                 <div class="form-group">
-                    <label for="dashboardPassword">Dashboard Şifresi:</label>
-                    <input type="password" id="dashboardPassword" placeholder="Şifrenizi girin..." />
+                    <label>Dashboard Şifresi:</label>
+                    <input type="password" id="password" placeholder="Şifrenizi girin..." />
                 </div>
                 
-                <button class="btn btn-primary" onclick="checkPassword()">🔓 Giriş Yap</button>
+                <button class="btn btn-primary" onclick="login()">🔓 Giriş Yap</button>
                 
                 <div style="margin-top: 15px; padding: 10px; background: #dbeafe; border-radius: 8px; font-size: 14px;">
                     <strong>💡 İpucu:</strong> Şifre doğru olduğunda Excel verileri otomatik yüklenecek!
@@ -395,99 +244,66 @@
             </div>
 
             <!-- Loading -->
-            <div class="loading-div" id="loadingDiv">
-                <div class="loading-spinner"></div>
-                <h3>Dosya yükleniyor...</h3>
-                <p>Lütfen bekleyin, Excel verisi işleniyor.</p>
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <h3 id="loadingTitle">Yükleniyor...</h3>
+                <div class="progress">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+                <p id="loadingText">Lütfen bekleyin...</p>
             </div>
 
             <!-- Filters -->
-            <div class="filters-container" id="filtersDiv" style="display: none;">
-                <h3 style="margin-bottom: 20px; color: #374151;">🔍 Filtreler</h3>
+            <div class="filters" id="filters">
+                <h3 style="margin-bottom: 20px;">🔍 Filtreler</h3>
                 
-                <div class="filters-grid">
-                    <div class="filter-group">
+                <div class="filter-grid">
+                    <div>
                         <label>🏢 Account:</label>
-                        <select id="account"><option value="">Tümü</option></select>
+                        <select id="account"><option value="">Tüm Accountlar</option></select>
                     </div>
-                    <div class="filter-group">
+                    <div>
                         <label>🌍 Region:</label>
-                        <select id="region"><option value="">Tümü</option></select>
+                        <select id="region"><option value="">Tüm Bölgeler</option></select>
                     </div>
-                    <div class="filter-group">
+                    <div>
                         <label>🏙️ Şehir:</label>
-                        <select id="city"><option value="">Tümü</option></select>
+                        <select id="city"><option value="">Tüm Şehirler</option></select>
                     </div>
-                    <div class="filter-group">
+                    <div>
                         <label>🏪 Mağaza:</label>
-                        <select id="store"><option value="">Tümü</option></select>
+                        <select id="store"><option value="">Tüm Mağazalar</option></select>
                     </div>
-                    <div class="filter-group">
+                    <div>
                         <label>📦 Kategori:</label>
-                        <select id="category"><option value="">Tümü</option></select>
+                        <select id="category"><option value="">Tüm Kategoriler</option></select>
                     </div>
-                    <div class="filter-group">
-                        <label>📂 Alt Kategori:</label>
-                        <select id="subcat"><option value="">Tümü</option></select>
-                    </div>
-                    <div class="filter-group">
+                    <div>
                         <label>🏷️ Marka:</label>
-                        <select id="brand"><option value="">Tümü</option></select>
+                        <select id="brand"><option value="">Tüm Markalar</option></select>
                     </div>
-                    <div class="filter-group">
-                        <label>⚡ Devir Hızı:</label>
-                        <select id="turnover">
-                            <option value="">Tümü</option>
-                            <option value="düşük">Düşük (<1.5 ay)</option>
-                            <option value="normal">Normal (1.5-3 ay)</option>
-                            <option value="yüksek">Yüksek (>3 ay)</option>
-                            <option value="problem">Problem (Satış Durmuş)</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label>📊 Stok Durumu:</label>
-                        <select id="status">
-                            <option value="">Tümü</option>
-                            <option value="normal">Normal</option>
-                            <option value="düşük">Düşük Stok</option>
-                            <option value="yüksek">Yüksek Stok</option>
-                            <option value="problem">Satış Durmuş</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label>📋 A/P Durumu:</label>
-                        <select id="apStatus">
-                            <option value="Aktif" selected>Aktif</option>
-                            <option value="Pasif">Pasif</option>
-                            <option value="">Tümü</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
+                    <div>
                         <label>🔍 Ürün Ara:</label>
                         <input type="text" id="search" placeholder="Ürün ara..." />
                     </div>
                 </div>
 
-                <div class="filter-actions">
-                    <button class="btn btn-primary" onclick="resetFilters()">🔍 Filtreleri Sıfırla</button>
-                    <span id="filterCount" style="margin-left: 15px; font-weight: 600; color: #4f46e5;"></span>
+                <div style="text-align: center;">
+                    <button class="btn btn-secondary" onclick="resetFilters()">🔄 Filtreleri Temizle</button>
+                    <span id="resultCount" style="margin-left: 15px; font-weight: 600; color: #4f46e5;"></span>
                 </div>
             </div>
 
             <!-- Table -->
-            <div class="table-container">
+            <div class="table-box">
                 <div class="table-header">
-                    <div class="table-title">📋 Ürün Listesi</div>
-                    <div class="table-stats">
-                        <span id="fileName">-</span> | 
-                        <span id="tableStats">0 ürün</span>
-                    </div>
+                    <span id="tableTitle">📋 Ürün Listesi</span>
+                    <span id="tableCount">0 kayıt</span>
                 </div>
                 
                 <div id="tableContent">
                     <div class="no-data">
-                        <h3>📊 Dashboard Hazır</h3>
-                        <p>Lütfen önce giriş yapın</p>
+                        <h3>Başlamak için giriş yapın</h3>
                     </div>
                 </div>
             </div>
@@ -495,681 +311,285 @@
     </div>
 
     <script>
-        // Global Variables
         let allData = [];
-        let latestDate = null;
-        let processedData = [];
         let filteredData = [];
-        let currentSort = { column: 'code', direction: 'asc' };
-        let isAuthenticated = false;
+        let isLoggedIn = false;
 
-        // Dashboard Configuration
-        const DASHBOARD_PASSWORD = "dashboard123";
-        const GITHUB_CONFIG = {
-            username: "gkobar",
-            repo: "dashboard-project"
-        };
+        function setStatus(text) {
+            document.getElementById('statusText').textContent = text;
+        }
 
-        // Password Check Function
-        function checkPassword() {
-            const inputPassword = document.getElementById('dashboardPassword').value.trim();
-            
-            if (inputPassword === DASHBOARD_PASSWORD) {
-                isAuthenticated = true;
-                showSuccessMessage('Giriş başarılı! Veriler yükleniyor...');
-                document.getElementById('passwordSetup').style.display = 'none';
-                loadExcelFromGitHub();
+        function setProgress(percent) {
+            document.getElementById('progressBar').style.width = percent + '%';
+            document.getElementById('loadingText').textContent = `İşleniyor... ${percent}%`;
+        }
+
+        function login() {
+            const pwd = document.getElementById('password').value;
+            if (pwd === 'dashboard123') {
+                isLoggedIn = true;
+                document.getElementById('passwordBox').style.display = 'none';
+                loadFromGitHub();
             } else {
-                showErrorMessage('Hatalı şifre! Tekrar deneyin.');
-                document.getElementById('dashboardPassword').value = '';
-                document.getElementById('dashboardPassword').focus();
+                alert('Yanlış şifre!');
             }
         }
 
-        // Setup password input
-        function setupPasswordInput() {
-            const passwordInput = document.getElementById('dashboardPassword');
-            if (passwordInput) {
-                passwordInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        checkPassword();
-                    }
-                });
-                passwordInput.focus();
-            }
-        }
+        async function loadFromGitHub() {
+            if (!isLoggedIn) return;
 
-        // Show password setup
-        function showPasswordSetup() {
-            setStatus('warning', 'Giriş gerekli');
-            document.getElementById('passwordSetup').style.display = 'block';
-            document.getElementById('filtersDiv').style.display = 'none';
-            setupPasswordInput();
-        }
-
-        // Load Excel from GitHub
-        async function loadExcelFromGitHub() {
-            if (!isAuthenticated) {
-                showPasswordSetup();
-                return;
-            }
-
-            setStatus('loading', 'GitHub\'dan Excel yükleniyor...');
-            document.getElementById('loadingDiv').classList.add('show');
-
+            document.getElementById('loading').classList.add('show');
+            setStatus('GitHub\'dan yükleniyor...');
+            
             try {
-                const url = `https://raw.githubusercontent.com/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/main/store-data.xlsx`;
-                
+                const url = 'https://raw.githubusercontent.com/gkobar/dashboard-project/main/store-data.xlsx';
                 const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error('Excel dosyası bulunamadı');
-                }
-
-                const arrayBuffer = await response.arrayBuffer();
-                const data = new Uint8Array(arrayBuffer);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-                allData = jsonData;
-                findLatestDate();
-
-                setStatus('success', 'GitHub\'dan yüklendi (' + allData.length + ' kayıt)');
-                document.getElementById('fileName').textContent = 'store-data.xlsx (GitHub)';
-                document.getElementById('lastUpdate').textContent = 'Son güncelleme: ' + new Date().toLocaleString('tr-TR');
                 
-                document.getElementById('loadingDiv').classList.remove('show');
-                document.getElementById('filtersDiv').style.display = 'block';
-                
-                updateCascadeFilters();
-                processAllData();
-                
-                showSuccessMessage('Excel GitHub\'dan başarıyla yüklendi!');
+                if (!response.ok) throw new Error('Dosya bulunamadı');
 
+                const buffer = await response.arrayBuffer();
+                const workbook = XLSX.read(new Uint8Array(buffer), { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const data = XLSX.utils.sheet_to_json(sheet);
+
+                await processData(data);
+                
             } catch (error) {
-                console.log('GitHub\'dan yükleme başarısız:', error.message);
-                document.getElementById('loadingDiv').classList.remove('show');
-                showExcelUploadInterface();
+                alert('GitHub\'dan yükleme başarısız: ' + error.message);
+                document.getElementById('loading').classList.remove('show');
             }
         }
 
-        // Show Excel upload interface
-        function showExcelUploadInterface() {
-            setStatus('warning', 'Excel dosyası bekleniyor');
-            document.getElementById('filtersDiv').style.display = 'block';
-            document.getElementById('tableContent').innerHTML = `
-                <div class="no-data">
-                    <h3>📁 Excel Dosyası Bulunamadı</h3>
-                    <p>GitHub'da store-data.xlsx dosyası bulunamadı.</p>
-                    <p>Lütfen Excel dosyanızı GitHub repository'sine yükleyin.</p>
-                    <button class="btn btn-primary" onclick="showUploadInstructions()" style="margin-top: 15px;">
-                        📋 Yükleme Talimatları
-                    </button>
-                </div>
-            `;
-        }
+        function loadFile() {
+            if (!isLoggedIn) return;
 
-        // Show upload instructions
-        function showUploadInstructions() {
-            const modal = document.createElement('div');
-            modal.style.cssText = `
-                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                background: rgba(0,0,0,0.5); z-index: 2000; display: flex;
-                justify-content: center; align-items: center;
-            `;
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.xlsx,.xls';
             
-            const content = document.createElement('div');
-            content.style.cssText = `
-                background: white; padding: 30px; border-radius: 15px; max-width: 600px;
-                box-shadow: 0 25px 50px rgba(0,0,0,0.25); text-align: center;
-            `;
-            
-            content.innerHTML = `
-                <h3 style="margin-bottom: 20px; color: #374151;">📁 Excel Dosyası Yükleme</h3>
-                <p style="margin-bottom: 20px; color: #6b7280; line-height: 1.5;">
-                    Dashboard'ın çalışması için Excel dosyanızı GitHub'a yüklemeniz gerekiyor:
-                </p>
-                
-                <div style="background: #f8fafc; padding: 20px; border-radius: 10px; text-align: left; margin: 20px 0;">
-                    <strong>📋 Adımlar:</strong><br><br>
-                    <strong>1.</strong> <a href="https://github.com/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}" target="_blank" style="color: #3b82f6;">GitHub Repository'nize gidin</a><br>
-                    <strong>2.</strong> "Add file" → "Upload files" tıklayın<br>
-                    <strong>3.</strong> Excel dosyanızı sürükleyin<br>
-                    <strong>4.</strong> Dosya adını <code>store-data.xlsx</code> olarak değiştirin<br>
-                    <strong>5.</strong> "Commit changes" tıklayın<br>
-                    <strong>6.</strong> Bu sayfayı yenileyin (F5)<br>
-                </div>
-                
-                <button onclick="this.parentElement.parentElement.remove()" 
-                        style="background: #3b82f6; color: white; border: none; padding: 10px 20px; 
-                               border-radius: 8px; cursor: pointer; margin-top: 10px;">
-                    Anladım
-                </button>
-            `;
-            
-            modal.appendChild(content);
-            document.body.appendChild(modal);
-        }
+            input.onchange = async function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
 
-        // Find latest date in data
-        function findLatestDate() {
-            if (allData.length === 0) return;
-            
-            const dates = [];
-            allData.forEach(row => {
-                if (row.Date) {
-                    const date = new Date(row.Date);
-                    if (!isNaN(date.getTime())) {
-                        dates.push(date);
+                document.getElementById('loading').classList.add('show');
+                setStatus('Dosya okunuyor...');
+
+                const reader = new FileReader();
+                reader.onload = async function(event) {
+                    try {
+                        const workbook = XLSX.read(event.target.result, { type: 'array' });
+                        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const data = XLSX.utils.sheet_to_json(sheet);
+                        await processData(data);
+                    } catch (error) {
+                        alert('Dosya işleme hatası: ' + error.message);
+                        document.getElementById('loading').classList.remove('show');
                     }
+                };
+                reader.readAsArrayBuffer(file);
+            };
+            
+            input.click();
+        }
+
+        async function processData(rawData) {
+            allData = rawData;
+            const products = {};
+            
+            // Basit işleme - sadece gruplayalım
+            for (let i = 0; i < rawData.length; i++) {
+                if (i % 500 === 0) {
+                    const percent = Math.round((i / rawData.length) * 100);
+                    setProgress(percent);
+                    await new Promise(r => setTimeout(r, 10)); // Safari için nefes alma
                 }
-            });
-            
-            if (dates.length > 0) {
-                latestDate = new Date(Math.max(...dates));
-                console.log('Latest date found:', latestDate.toLocaleDateString('tr-TR'));
-            } else {
-                latestDate = new Date(); // Fallback to today
-            }
-        }
 
-        // Update cascade filters
-        function updateCascadeFilters() {
-            const accounts = [...new Set(allData.map(row => row.ACCOUNT).filter(Boolean))].sort();
-            const regions = [...new Set(allData.map(row => row.BÖLGE).filter(Boolean))].sort();
-            const cities = [...new Set(allData.map(row => row.ŞEHİR).filter(Boolean))].sort();
-            const stores = [...new Set(allData.map(row => row.STORE).filter(Boolean))].sort();
-            const categories = [...new Set(allData.map(row => row['Üst Kategori']).filter(Boolean))].sort();
-            const brands = [...new Set(allData.map(row => row.Marka).filter(Boolean))].sort();
-
-            updateSelectOptions('account', accounts);
-            updateSelectOptions('region', regions);
-            updateSelectOptions('city', cities);
-            updateSelectOptions('store', stores);
-            updateSelectOptions('category', categories);
-            updateSelectOptions('brand', brands);
-        }
-
-        // Update select options with current value preservation
-        function updateSelectOptions(selectId, options) {
-            const select = document.getElementById(selectId);
-            if (select) {
-                const currentValue = select.value;
-                select.innerHTML = '<option value="">Tümü</option>';
-                options.forEach(option => {
-                    const selected = option === currentValue ? 'selected' : '';
-                    select.innerHTML += `<option value="${option}" ${selected}>${option}</option>`;
-                });
-            }
-        }
-
-        // Process all data initially
-        function processAllData() {
-            processedData = processData(allData);
-            filteredData = [...processedData];
-            displayTable();
-        }
-
-        // Process data with dynamic month calculation - COMPLETELY FIXED VERSION
-        function processData(rawData) {
-            const groupedProducts = {};
-            const today = latestDate || new Date();
-            
-            rawData.forEach(row => {
-                const productKey = row.PRODUCTCODE || 'Unknown';
+                const row = rawData[i];
+                const code = row.PRODUCTCODE || 'Unknown';
                 
-                if (!groupedProducts[productKey]) {
-                    groupedProducts[productKey] = {
-                        code: row.PRODUCTCODE || 'Unknown',
-                        name: row['PRODUCT NAME'] || 'Unknown Product',
+                if (!products[code]) {
+                    products[code] = {
+                        code: code,
+                        name: row['PRODUCT NAME'] || 'Unknown',
                         account: row.ACCOUNT || '',
                         region: row.BÖLGE || '',
-                        city: row.ŞEHİR || '',
-                        store: 'Multiple Stores', // Birden fazla mağaza için
-                        category: row['Üst Kategori'] || '',      
-                        subCategory: row.KATEGORI || '',          
+                        store: row.STORE || '',
+                        category: row['Üst Kategori'] || '',
                         brand: row.Marka || '',
-                        totalStock: 0, // Toplam stok
-                        monthlyData: {},
-                        stockData: [],
-                        salesData: [],
-                        currentMonthSales: 0,
-                        currentMonthName: '',
-                        storeCount: new Set() // Kaç mağazada var
+                        stock: 0,
+                        sales: 0
                     };
                 }
-                
-                const product = groupedProducts[productKey];
-                const monthName = row.MONTHS || '';
-                const year = row.YEAR || today.getFullYear();
-                const fullMonthKey = `${monthName} ${year}`;
-                
-                // Mağaza sayısını takip et
-                if (row.STORE) {
-                    product.storeCount.add(row.STORE);
+
+                const qty = parseInt(row.QUANTITY) || 0;
+                if (row['SELL OUT/STOCK'] === 'Stock') {
+                    products[code].stock += qty;
+                } else if (row['SELL OUT/STOCK'] === 'Sell Out') {
+                    products[code].sales += qty;
                 }
-                
-                // Satış ve stok verilerini ayrı işle
-                if (row['SELL OUT/STOCK'] === 'Sell Out') {
-                    const quantity = parseInt(row.QUANTITY) || 0;
-                    if (!product.monthlyData[fullMonthKey]) {
-                        product.monthlyData[fullMonthKey] = 0;
-                    }
-                    product.monthlyData[fullMonthKey] += quantity;
-                    
-                    // Sales data for calculations
-                    product.salesData.push({
-                        month: monthName,
-                        year: year,
-                        quantity: quantity,
-                        fullKey: fullMonthKey,
-                        store: row.STORE
-                    });
-                    
-                    // Current month sales
-                    const currentMonthKey = today.toLocaleString('tr-TR', { month: 'long', year: 'numeric' });
-                    if (fullMonthKey === currentMonthKey) {
-                        product.currentMonthSales += quantity;
-                        product.currentMonthName = fullMonthKey;
-                    }
-                    
-                } else if (row['SELL OUT/STOCK'] === 'Stock') {
-                    product.stockData.push({
-                        month: monthName,
-                        year: year,
-                        quantity: parseInt(row.QUANTITY) || 0,
-                        store: row.STORE
-                    });
-                }
-            });
+            }
 
-            return Object.values(groupedProducts).map(product => {
-                // TOPLAM STOK HESAPLAMA - En son aylardaki tüm mağazaların toplamı
-                if (product.stockData && product.stockData.length > 0) {
-                    // En son tarihli stokları bul
-                    const sortedStocks = product.stockData.sort((a, b) => {
-                        if (a.year !== b.year) return b.year - a.year;
-                        const monthOrder = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 
-                                          'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
-                        return monthOrder.indexOf(b.month) - monthOrder.indexOf(a.month);
-                    });
-                    
-                    // En son tarihli stokları al
-                    const latestStocks = sortedStocks.filter(stock => 
-                        stock.year === sortedStocks[0].year && 
-                        stock.month === sortedStocks[0].month
-                    );
-                    
-                    // Tüm mağazaların stokunu topla
-                    product.totalStock = latestStocks.reduce((sum, stock) => sum + stock.quantity, 0);
-                } else {
-                    product.totalStock = 0;
-                }
-
-                // Forecast calculation - FIXED
-                let forecast = 0;
-                if (product.currentMonthSales > 0 && latestDate) {
-                    const currentDay = latestDate.getDate();
-                    const daysInMonth = new Date(latestDate.getFullYear(), latestDate.getMonth() + 1, 0).getDate();
-                    const remainingDays = daysInMonth - currentDay;
-                    
-                    if (remainingDays > 0) {
-                        const avgDaily = product.currentMonthSales / currentDay;
-                        forecast = product.currentMonthSales + (avgDaily * remainingDays);
-                    } else {
-                        forecast = product.currentMonthSales;
-                    }
-                }
-                
-                // Calculate past 3 months data - FIXED
-                const past3Months = {};
-                for (let i = 1; i <= 3; i++) {
-                    const pastDate = new Date(today.getFullYear(), today.getMonth() - i, 1);
-                    const monthKey = pastDate.toLocaleString('tr-TR', { month: 'long', year: 'numeric' });
-                    past3Months[monthKey] = product.monthlyData[monthKey] || 0;
-                }
-                
-                // Calculate turnover rate - FIXED
-                const recentSalesData = product.salesData.filter(sale => {
-                    const saleDate = new Date(sale.year, getMonthIndex(sale.month), 1);
-                    const threeMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 3, 1);
-                    return saleDate >= threeMonthsAgo;
-                });
-                
-                let monthlySales = 0;
-                if (recentSalesData.length > 0) {
-                    const totalRecentSales = recentSalesData.reduce((sum, sale) => sum + sale.quantity, 0);
-                    const monthsWithSales = new Set(recentSalesData.map(sale => sale.fullKey)).size;
-                    monthlySales = monthsWithSales > 0 ? totalRecentSales / monthsWithSales : 0;
-                }
-                
-                let turnover = 0;
-                let turnoverStatus = 'normal';
-                
-                if (product.totalStock > 0 && monthlySales > 0) {
-                    turnover = product.totalStock / monthlySales;
-                    if (turnover > 3) {
-                        turnoverStatus = 'yüksek';
-                    } else if (turnover < 1.5) {
-                        turnoverStatus = 'düşük';
-                    } else {
-                        turnoverStatus = 'normal';
-                    }
-                } else if (product.totalStock > 0 && monthlySales === 0) {
-                    turnover = 999; // Very high turnover
-                    turnoverStatus = 'problem';
-                } else if (product.totalStock === 0 && monthlySales > 0) {
-                    turnover = 0;
-                    turnoverStatus = 'düşük';
-                } else {
-                    turnover = 0;
-                    turnoverStatus = 'normal';
-                }
-
-                const totalSales = Object.values(product.monthlyData).reduce((a, b) => a + b, 0);
-
-                // Mağaza bilgisi güncelle
-                const storeCount = product.storeCount.size;
-                product.store = storeCount === 1 ? 
-                    Array.from(product.storeCount)[0] : 
-                    `${storeCount} Mağaza`;
-
-                return {
-                    ...product,
-                    stock: product.totalStock, // Eski stock yerine totalStock kullan
-                    forecast: Math.round(forecast),
-                    turnover: turnover === 999 ? 'Stock Out' : parseFloat(turnover.toFixed(2)),
-                    status: turnoverStatus,
-                    totalSales: totalSales,
-                    past3Months: past3Months,
-                    monthlySales: monthlySales,
-                    storeCount: storeCount
-                };
-            });
-        }
-
-        // Helper function to get month index
-        function getMonthIndex(monthName) {
-            const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 
-                          'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
-            return months.indexOf(monthName);
-        }
-
-        // Filter and process with proper data handling - FIXED
-        function filterAndProcess() {
-            const searchTerm = document.getElementById('search').value.toLowerCase();
-            const selectedAccount = document.getElementById('account').value;
-            const selectedRegion = document.getElementById('region').value;
-            const selectedCity = document.getElementById('city').value;
-            const selectedStore = document.getElementById('store').value;
-            const selectedCategory = document.getElementById('category').value;
-            const selectedSubcat = document.getElementById('subcat').value;
-            const selectedBrand = document.getElementById('brand').value;
-            const selectedTurnover = document.getElementById('turnover').value;
-            const selectedStatus = document.getElementById('status').value;
-            const selectedAPStatus = document.getElementById('apStatus').value;
-
-            // First filter raw data, then process
-            let filteredRawData = allData.filter(row => {
-                return (
-                    (!selectedAccount || row.ACCOUNT === selectedAccount) &&
-                    (!selectedRegion || row.BÖLGE === selectedRegion) &&
-                    (!selectedCity || row.ŞEHİR === selectedCity) &&
-                    (!selectedStore || row.STORE === selectedStore) &&
-                    (!selectedCategory || row['Üst Kategori'] === selectedCategory) &&
-                    (!selectedSubcat || row.KATEGORI === selectedSubcat) &&
-                    (!selectedBrand || row.Marka === selectedBrand) &&
-                    (!selectedAPStatus || row['A/P'] === selectedAPStatus)
-                );
-            });
-
-            // Process filtered raw data
-            const filteredProcessedData = processData(filteredRawData);
-
-            // Apply remaining filters
-            filteredData = filteredProcessedData.filter(product => {
-                return (
-                    (!searchTerm || product.name.toLowerCase().includes(searchTerm) || product.code.toLowerCase().includes(searchTerm)) &&
-                    (!selectedTurnover || product.status === selectedTurnover) &&
-                    (!selectedStatus || product.status === selectedStatus)
-                );
-            });
-
-            displayTable();
-        }
-
-        // Display table with dynamic headers - UPDATED
-        function displayTable() {
-            const tableContent = document.getElementById('tableContent');
+            filteredData = Object.values(products);
             
-            if (filteredData.length === 0) {
-                tableContent.innerHTML = `
-                    <div class="no-data">
-                        <h3>📊 Sonuç Bulunamadı</h3>
-                        <p>Seçilen filtrelere uygun ürün bulunamadı.</p>
-                        <button class="btn btn-secondary" onclick="resetFilters()">🔄 Filtreleri Temizle</button>
-                    </div>
-                `;
+            // Filtreleri güncelle
+            updateFilters();
+            
+            // Tabloyu göster - sadece ilk 500 kayıt (Safari için)
+            displayTable();
+            
+            document.getElementById('loading').classList.remove('show');
+            document.getElementById('filters').classList.add('show');
+            
+            setStatus(`✅ ${filteredData.length} ürün yüklendi`);
+        }
+
+        function updateFilters() {
+            const accounts = [...new Set(allData.map(r => r.ACCOUNT).filter(Boolean))].sort();
+            const regions = [...new Set(allData.map(r => r.BÖLGE).filter(Boolean))].sort();
+            const cities = [...new Set(allData.map(r => r.ŞEHİR).filter(Boolean))].sort();
+            const stores = [...new Set(allData.map(r => r.STORE).filter(Boolean))].sort();
+            const categories = [...new Set(allData.map(r => r['Üst Kategori']).filter(Boolean))].sort();
+            const brands = [...new Set(allData.map(r => r.Marka).filter(Boolean))].sort();
+
+            updateSelect('account', accounts);
+            updateSelect('region', regions);
+            updateSelect('city', cities);
+            updateSelect('store', stores);
+            updateSelect('category', categories);
+            updateSelect('brand', brands);
+        }
+
+        function updateSelect(id, options) {
+            const select = document.getElementById(id);
+            const current = select.value;
+            
+            const labels = {
+                'account': 'Tüm Accountlar',
+                'region': 'Tüm Bölgeler', 
+                'city': 'Tüm Şehirler',
+                'store': 'Tüm Mağazalar',
+                'category': 'Tüm Kategoriler',
+                'brand': 'Tüm Markalar'
+            };
+            
+            select.innerHTML = `<option value="">${labels[id]}</option>`;
+            options.forEach(opt => {
+                const selected = opt === current ? 'selected' : '';
+                select.innerHTML += `<option value="${opt}" ${selected}>${opt}</option>`;
+            });
+        }
+
+        function displayTable() {
+            const content = document.getElementById('tableContent');
+            
+            if (!filteredData.length) {
+                content.innerHTML = '<div class="no-data"><h3>Sonuç bulunamadı</h3></div>';
                 return;
             }
 
-            // Sort data
-            const sortedData = [...filteredData].sort((a, b) => {
-                let aVal = a[currentSort.column];
-                let bVal = b[currentSort.column];
-                
-                // Handle special cases for past months
-                if (currentSort.column.startsWith('past_')) {
-                    const monthName = currentSort.column.replace('past_', '');
-                    const today = latestDate || new Date();
-                    const monthIndex = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 
-                                      'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'].indexOf(monthName);
-                    if (monthIndex !== -1) {
-                        const pastDate = new Date(today.getFullYear(), today.getMonth() - (3 - monthIndex), 1);
-                        const fullMonthKey = pastDate.toLocaleString('tr-TR', { month: 'long', year: 'numeric' });
-                        aVal = a.past3Months[fullMonthKey] || 0;
-                        bVal = b.past3Months[fullMonthKey] || 0;
-                    }
-                }
-                
-                // Convert to numbers if possible
-                if (!isNaN(aVal) && !isNaN(bVal)) {
-                    aVal = Number(aVal);
-                    bVal = Number(bVal);
-                }
-                
-                if (currentSort.direction === 'asc') {
-                    if (typeof aVal === 'number' && typeof bVal === 'number') {
-                        return aVal - bVal;
-                    }
-                    return String(aVal).localeCompare(String(bVal), 'tr-TR', { numeric: true });
-                } else {
-                    if (typeof aVal === 'number' && typeof bVal === 'number') {
-                        return bVal - aVal;
-                    }
-                    return String(bVal).localeCompare(String(aVal), 'tr-TR', { numeric: true });
-                }
-            });
-
-            // Dynamic headers
-            let currentMonthName = '';
-            let forecastHeader = 'Tahmin FC';
-            let currentMonthHeader = 'Bu Ay';
-
-            if (sortedData.length > 0 && sortedData[0].currentMonthName) {
-                currentMonthName = sortedData[0].currentMonthName;
-                const monthParts = currentMonthName.split(' ');
-                if (monthParts.length > 0) {
-                    forecastHeader = monthParts[0] + ' FC';
-                    currentMonthHeader = monthParts[0];
-                }
-            }
+            // Safari için sadece ilk 300 kayıt
+            const displayData = filteredData.slice(0, 300);
             
-            // Past 3 months headers
-            const pastMonthsHeaders = [];
-            const today = latestDate || new Date();
-            for (let i = 1; i <= 3; i++) {
-                const pastDate = new Date(today.getFullYear(), today.getMonth() - i, 1);
-                const monthName = pastDate.toLocaleString('tr-TR', { month: 'long' });
-                pastMonthsHeaders.push(monthName);
-            }
-
-            // Create table HTML
-            let tableHTML = `
+            let html = `
                 <table>
                     <thead>
                         <tr>
-                            <th onclick="sortTable('code')">Kod ${getSortIcon('code')}</th>
-                            <th onclick="sortTable('name')">Ürün Adı ${getSortIcon('name')}</th>
-                            <th onclick="sortTable('stock')">Stok ${getSortIcon('stock')}</th>
-                            <th onclick="sortTable('forecast')">${forecastHeader} ${getSortIcon('forecast')}</th>
-                            <th onclick="sortTable('currentMonthSales')">${currentMonthHeader} ${getSortIcon('currentMonthSales')}</th>
-            `;
-
-            pastMonthsHeaders.forEach(month => {
-                tableHTML += `<th onclick="sortTable('past_${month}')">${month} ${getSortIcon('past_' + month)}</th>`;
-            });
-
-            tableHTML += `
-                            <th onclick="sortTable('turnover')">Devir Hızı ${getSortIcon('turnover')}</th>
-                            <th onclick="sortTable('status')">Stok Durumu ${getSortIcon('status')}</th>
+                            <th>Kod</th>
+                            <th>Ürün</th>
+                            <th>Account</th>
+                            <th>Bölge</th>
+                            <th>Mağaza</th>
+                            <th>Kategori</th>
+                            <th>Stok</th>
+                            <th>Satış</th>
                         </tr>
                     </thead>
                     <tbody>
             `;
 
-            sortedData.forEach(product => {
-                const turnoverDisplay = typeof product.turnover === 'number' ? 
-                    product.turnover.toFixed(1) + ' ay' : product.turnover;
-                
-                const status = product.status || 'normal';
-                const turnoverClass = `status-${status}`;
-                
-                tableHTML += `
+            displayData.forEach(p => {
+                html += `
                     <tr>
-                        <td data-label="Kod">${product.code}</td>
-                        <td data-label="Ürün Adı">${product.name}</td>
-                        <td data-label="Stok">${(product.stock || 0).toLocaleString()}</td>
-                        <td data-label="${forecastHeader}">${(product.forecast || 0).toLocaleString()}</td>
-                        <td data-label="${currentMonthHeader}">${(product.currentMonthSales || 0).toLocaleString()}</td>
-                `;
-                
-                pastMonthsHeaders.forEach((month, index) => {
-                    const pastDate = new Date(today.getFullYear(), today.getMonth() - (index + 1), 1);
-                    const fullMonthKey = pastDate.toLocaleString('tr-TR', { month: 'long', year: 'numeric' });
-                    const monthValue = (product.past3Months && product.past3Months[fullMonthKey]) ? product.past3Months[fullMonthKey] : 0;
-                    tableHTML += `<td data-label="${month}">${monthValue.toLocaleString()}</td>`;
-                });
-                
-                tableHTML += `
-                        <td data-label="Devir Hızı">${turnoverDisplay}</td>
-                        <td data-label="Stok Durumu"><span class="${turnoverClass}">${capitalizeFirst(status)}</span></td>
+                        <td data-label="Kod">${p.code}</td>
+                        <td data-label="Ürün">${p.name}</td>
+                        <td data-label="Account">${p.account}</td>
+                        <td data-label="Bölge">${p.region}</td>
+                        <td data-label="Mağaza">${p.store}</td>
+                        <td data-label="Kategori">${p.category}</td>
+                        <td data-label="Stok">${p.stock.toLocaleString()}</td>
+                        <td data-label="Satış">${p.sales.toLocaleString()}</td>
                     </tr>
                 `;
             });
 
-            tableHTML += '</tbody></table>';
-            tableContent.innerHTML = tableHTML;
+            html += '</tbody></table>';
+            content.innerHTML = html;
 
-            document.getElementById('tableStats').textContent = `${filteredData.length} ürün`;
+            document.getElementById('tableCount').textContent = 
+                `${displayData.length} / ${filteredData.length} kayıt`;
         }
 
-        // Get sort icon
-        function getSortIcon(column) {
-            if (currentSort.column === column) {
-                return currentSort.direction === 'asc' ? '↑' : '↓';
-            }
-            return '↕';
-        }
+        function filterData() {
+            const search = document.getElementById('search').value.toLowerCase();
+            const account = document.getElementById('account').value;
+            const region = document.getElementById('region').value;
+            const city = document.getElementById('city').value;
+            const store = document.getElementById('store').value;
+            const category = document.getElementById('category').value;
+            const brand = document.getElementById('brand').value;
 
-        // Sort table
-        function sortTable(column) {
-            if (currentSort.column === column) {
-                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
-            } else {
-                currentSort.column = column;
-                currentSort.direction = 'asc';
+            // Basit filtreleme
+            const products = {};
+            
+            allData.forEach(row => {
+                if (
+                    (!account || row.ACCOUNT === account) &&
+                    (!region || row.BÖLGE === region) &&
+                    (!city || row.ŞEHİR === city) &&
+                    (!store || row.STORE === store) &&
+                    (!category || row['Üst Kategori'] === category) &&
+                    (!brand || row.Marka === brand)
+                ) {
+                    const code = row.PRODUCTCODE || 'Unknown';
+                    
+                    if (!products[code]) {
+                        products[code] = {
+                            code: code,
+                            name: row['PRODUCT NAME'] || 'Unknown',
+                            account: row.ACCOUNT || '',
+                            region: row.BÖLGE || '',
+                            city: row.ŞEHİR || '',
+                            store: row.STORE || '',
+                            category: row['Üst Kategori'] || '',
+                            brand: row.Marka || '',
+                            stock: 0,
+                            sales: 0
+                        };
+                    }
+
+                    const qty = parseInt(row.QUANTITY) || 0;
+                    if (row['SELL OUT/STOCK'] === 'Stock') {
+                        products[code].stock += qty;
+                    } else if (row['SELL OUT/STOCK'] === 'Sell Out') {
+                        products[code].sales += qty;
+                    }
+                }
+            });
+
+            filteredData = Object.values(products);
+
+            // Arama filtresi
+            if (search) {
+                filteredData = filteredData.filter(p => 
+                    p.name.toLowerCase().includes(search) || 
+                    p.code.toLowerCase().includes(search)
+                );
             }
+
+            document.getElementById('resultCount').textContent = `${filteredData.length} sonuç`;
             displayTable();
         }
 
-        // Capitalize first letter with safety check
-        function capitalizeFirst(str) {
-            if (!str || typeof str !== 'string') return 'Normal';
-            return str.charAt(0).toUpperCase() + str.slice(1);
-        }
-
-        // Update dependent filters with proper grouping
-        function updateDependentFilters() {
-            const selectedAccount = document.getElementById('account').value;
-            const selectedRegion = document.getElementById('region').value;
-            const selectedCity = document.getElementById('city').value;
-            const selectedStore = document.getElementById('store').value;
-            const selectedCategory = document.getElementById('category').value;
-
-            // Geographic cascade - always apply previous selections
-            let geoFilteredData = allData;
-
-            // Build cumulative geographic filter
-            if (selectedAccount) {
-                geoFilteredData = geoFilteredData.filter(row => row.ACCOUNT === selectedAccount);
-            }
-            if (selectedRegion) {
-                geoFilteredData = geoFilteredData.filter(row => row.BÖLGE === selectedRegion);
-            }
-            if (selectedCity) {
-                geoFilteredData = geoFilteredData.filter(row => row.ŞEHİR === selectedCity);
-            }
-            if (selectedStore) {
-                geoFilteredData = geoFilteredData.filter(row => row.STORE === selectedStore);
-            }
-
-            // Update next level options based on current selections
-            if (!selectedRegion && selectedAccount) {
-                const regions = [...new Set(allData.filter(row => row.ACCOUNT === selectedAccount).map(row => row.BÖLGE).filter(Boolean))].sort();
-                updateSelectOptions('region', regions);
-            }
-            
-            if (!selectedCity && (selectedAccount || selectedRegion)) {
-                let cityData = allData;
-                if (selectedAccount) cityData = cityData.filter(row => row.ACCOUNT === selectedAccount);
-                if (selectedRegion) cityData = cityData.filter(row => row.BÖLGE === selectedRegion);
-                const cities = [...new Set(cityData.map(row => row.ŞEHİR).filter(Boolean))].sort();
-                updateSelectOptions('city', cities);
-            }
-            
-            if (!selectedStore && (selectedAccount || selectedRegion || selectedCity)) {
-                let storeData = allData;
-                if (selectedAccount) storeData = storeData.filter(row => row.ACCOUNT === selectedAccount);
-                if (selectedRegion) storeData = storeData.filter(row => row.BÖLGE === selectedRegion);
-                if (selectedCity) storeData = storeData.filter(row => row.ŞEHİR === selectedCity);
-                const stores = [...new Set(storeData.map(row => row.STORE).filter(Boolean))].sort();
-                updateSelectOptions('store', stores);
-            }
-
-            // Product cascade - independent from geographic
-            let productFilteredData = allData;
-            if (selectedCategory) {
-                productFilteredData = productFilteredData.filter(row => row['Üst Kategori'] === selectedCategory);
-            }
-
-            // Update product cascade options
-            const subcategories = [...new Set(productFilteredData.map(row => row.KATEGORI).filter(Boolean))].sort();
-            updateSelectOptions('subcat', subcategories);
-
-            // Independent filters - always show all available options
-            const brands = [...new Set(allData.map(row => row.Marka).filter(Boolean))].sort();
-            updateSelectOptions('brand', brands);
-        }
-
-        // Filter change handlers
-        function onFilterChange() {
-            updateDependentFilters();
-            filterAndProcess();
-        }
-
-        // Reset filters
         function resetFilters() {
             document.getElementById('search').value = '';
             document.getElementById('account').value = '';
@@ -1177,154 +597,24 @@
             document.getElementById('city').value = '';
             document.getElementById('store').value = '';
             document.getElementById('category').value = '';
-            document.getElementById('subcat').value = '';
             document.getElementById('brand').value = '';
-            document.getElementById('turnover').value = '';
-            document.getElementById('status').value = '';
-            document.getElementById('apStatus').value = 'Aktif';
-            
-            updateCascadeFilters();
-            processAllData();
+            filterData();
         }
 
-        // Load Excel function
-        function loadExcel() {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.xlsx,.xls';
-            input.onchange = function(e) {
-                const file = e.target.files[0];
-                if (!file) return;
-
-                setStatus('loading', 'Excel dosyası işleniyor...');
-                document.getElementById('loadingDiv').classList.add('show');
-
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    try {
-                        const data = new Uint8Array(event.target.result);
-                        const workbook = XLSX.read(data, { type: 'array' });
-                        const firstSheetName = workbook.SheetNames[0];
-                        const worksheet = workbook.Sheets[firstSheetName];
-                        const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-                        allData = jsonData;
-                        findLatestDate();
-
-                        setStatus('success', 'Excel yüklendi (' + allData.length + ' kayıt)');
-                        document.getElementById('fileName').textContent = file.name;
-                        document.getElementById('lastUpdate').textContent = 'Son güncelleme: ' + new Date().toLocaleString('tr-TR');
-                        
-                        document.getElementById('loadingDiv').classList.remove('show');
-                        document.getElementById('filtersDiv').style.display = 'block';
-                        
-                        updateCascadeFilters();
-                        processAllData();
-                        
-                        showSuccessMessage('Excel başarıyla yüklendi!');
-
-                    } catch (error) {
-                        setStatus('error', 'Excel işleme hatası');
-                        document.getElementById('loadingDiv').classList.remove('show');
-                        showErrorMessage('Excel dosyası işlenirken hata oluştu: ' + error.message);
-                    }
-                };
-                reader.readAsArrayBuffer(file);
-            };
-            input.click();
-        }
-
-        // Refresh data
-        function refreshData() {
-            if (isAuthenticated) {
-                loadExcelFromGitHub();
-            } else {
-                showPasswordSetup();
-            }
-        }
-
-        // Set status
-        function setStatus(type, message) {
-            const statusDot = document.getElementById('statusDot');
-            const statusText = document.getElementById('statusText');
-            
-            statusDot.className = 'status-dot ' + type;
-            statusText.textContent = message;
-        }
-
-        // Show messages
-        function showSuccessMessage(message) {
-            showMessage(message, 'success');
-        }
-
-        function showErrorMessage(message) {
-            showMessage(message, 'error');
-        }
-
-        function showWarningMessage(message) {
-            showMessage(message, 'warning');
-        }
-
-        function showMessage(message, type) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${type}`;
-            messageDiv.textContent = message;
-            
-            messageDiv.style.cssText = `
-                position: fixed; top: 20px; right: 20px; z-index: 1000;
-                padding: 15px 20px; border-radius: 8px; font-weight: 600;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            `;
-            
-            document.body.appendChild(messageDiv);
-            
-            setTimeout(() => {
-                messageDiv.remove();
-            }, 5000);
-        }
-
-        // Initialize application
+        // Event listeners
         document.addEventListener('DOMContentLoaded', function() {
-            try {
-                showPasswordSetup();
+            document.getElementById('password').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') login();
+            });
 
-                // Event Listeners
-                const searchInput = document.getElementById('search');
-                if (searchInput) {
-                    searchInput.addEventListener('input', filterAndProcess);
+            ['search', 'account', 'region', 'city', 'store', 'category', 'brand'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el.tagName === 'INPUT') {
+                    el.addEventListener('input', filterData);
+                } else {
+                    el.addEventListener('change', filterData);
                 }
-
-                // Geographic Cascade Filters
-                const geoCascadeSelects = ['account', 'region', 'city', 'store'];
-                geoCascadeSelects.forEach(selectId => {
-                    const element = document.getElementById(selectId);
-                    if (element) {
-                        element.addEventListener('change', onFilterChange);
-                    }
-                });
-
-                // Product Cascade Filters  
-                const productCascadeSelects = ['category', 'subcat'];
-                productCascadeSelects.forEach(selectId => {
-                    const element = document.getElementById(selectId);
-                    if (element) {
-                        element.addEventListener('change', onFilterChange);
-                    }
-                });
-
-                // Independent Filters
-                const independentSelects = ['apStatus', 'brand', 'turnover', 'status'];
-                independentSelects.forEach(selectId => {
-                    const element = document.getElementById(selectId);
-                    if (element) {
-                        element.addEventListener('change', filterAndProcess);
-                    }
-                });
-
-            } catch (error) {
-                console.error('Initialization error:', error);
-                showErrorMessage('Sayfa yüklenirken hata oluştu!');
-            }
+            });
         });
     </script>
 </body>
